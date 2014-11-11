@@ -5838,7 +5838,10 @@ static int ufshcd_abort(struct scsi_cmnd *cmd)
 	scsi_print_command(cmd);
 	if (!hba->req_abort_count) {
 		ufshcd_print_host_regs(hba);
+<<<<<<< HEAD
 		ufshcd_print_host_state(hba);
+=======
+>>>>>>> 5cd6c58cffb1... scsi: ufs: reduce printout for aborted requests
 		ufshcd_print_pwr_info(hba);
 		ufshcd_print_trs(hba, 1 << tag, true);
 	} else {
