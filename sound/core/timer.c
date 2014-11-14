@@ -358,14 +358,13 @@ int snd_timer_close(struct snd_timer_instance *timeri)
 			slave->timer = NULL;
 			spin_unlock_irq(&slave_active_lock);
 		}
-<<<<<<< HEAD
-=======
+
 		spin_unlock(&timer->lock);
 		spin_unlock_irq(&slave_active_lock);
 		/* release a card refcount for safe disconnection */
 		if (timer->card)
 			put_device(timer->card->card_dev);
->>>>>>> 14dd06bdbab3... ALSA: timer: Handle disconnection more safely
+
 		mutex_unlock(&register_mutex);
 	}
  out:
