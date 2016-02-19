@@ -396,3 +396,11 @@ void machine_crash_shutdown(struct pt_regs *regs)
 {
 	/* Empty routine needed to avoid build errors. */
 }
+
+bool arch_kexec_is_hardboot_buffer_range(unsigned long start,
+	unsigned long end) {
+	unsigned long hardboot_reserve = KEXEC_HB_PAGE_ADDR;
+	unsigned long tempdest = hardboot_reserve - (SZ_1M * 64);
+	// reserve is the end, tempdest is the start of the buffer
+	return start < hardboot_reserve && end >= tempdest;
+}
