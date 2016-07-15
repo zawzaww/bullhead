@@ -24,13 +24,6 @@
 #include <linux/nmi.h>
 #include <linux/console.h>
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/exception.h>
-
-#ifdef CONFIG_LGE_HANDLE_PANIC
-#include <soc/qcom/lge/lge_handle_panic.h>
-#endif
-
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
 
@@ -145,6 +138,8 @@ void panic(const char *fmt, ...)
 	atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
 
 	bust_spinlocks(0);
+
+	console_flush_on_panic();
 
 	if (!panic_blink)
 		panic_blink = no_blink;
