@@ -135,7 +135,69 @@ static void __del_from_nat_cache(struct f2fs_nm_info *nm_i, struct nat_entry *e)
 	kmem_cache_free(nat_entry_slab, e);
 }
 
+<<<<<<< HEAD
 int is_checkpointed_node(struct f2fs_sb_info *sbi, nid_t nid)
+=======
+static void __set_nat_cache_dirty(struct f2fs_nm_info *nm_i,
+						struct nat_entry *ne)
+{
+	nid_t set = NAT_BLOCK_OFFSET(ne->ni.nid);
+	struct nat_entry_set *head;
+
+	if (get_nat_flag(ne, IS_DIRTY))
+		return;
+
+	head = radix_tree_lookup(&nm_i->nat_set_root, set);
+	if (!head) {
+		head = f2fs_kmem_cache_alloc(nat_entry_set_slab, GFP_NOFS);
+
+		INIT_LIST_HEAD(&head->entry_list);
+		INIT_LIST_HEAD(&head->set_list);
+		head->set = set;
+		head->entry_cnt = 0;
+		f2fs_radix_tree_insert(&nm_i->nat_set_root, set, head);
+	}
+	list_move_tail(&ne->list, &head->entry_list);
+	nm_i->dirty_nat_cnt++;
+	head->entry_cnt++;
+	set_nat_flag(ne, IS_DIRTY, true);
+}
+
+static void __clear_nat_cache_dirty(struct f2fs_nm_info *nm_i,
+		struct nat_entry_set *set, struct nat_entry *ne)
+{
+	list_move_tail(&ne->list, &nm_i->nat_entries);
+	set_nat_flag(ne, IS_DIRTY, false);
+	set->entry_cnt--;
+	nm_i->dirty_nat_cnt--;
+}
+
+static unsigned int __gang_lookup_nat_set(struct f2fs_nm_info *nm_i,
+		nid_t start, unsigned int nr, struct nat_entry_set **ep)
+{
+	return radix_tree_gang_lookup(&nm_i->nat_set_root, (void **)ep,
+							start, nr);
+}
+
+int need_dentry_mark(struct f2fs_sb_info *sbi, nid_t nid)
+{
+	struct f2fs_nm_info *nm_i = NM_I(sbi);
+	struct nat_entry *e;
+	bool need = false;
+
+	down_read(&nm_i->nat_tree_lock);
+	e = __lookup_nat_cache(nm_i, nid);
+	if (e) {
+		if (!get_nat_flag(e, IS_CHECKPOINTED) &&
+				!get_nat_flag(e, HAS_FSYNCED_INODE))
+			need = true;
+	}
+	up_read(&nm_i->nat_tree_lock);
+	return need;
+}
+
+bool is_checkpointed_node(struct f2fs_sb_info *sbi, nid_t nid)
+>>>>>>> 26831633cc8... f2fs: drop duplicate radix tree lookup of nat_entry_set
 {
 	struct f2fs_nm_info *nm_i = NM_I(sbi);
 	struct nat_entry *e;
@@ -1758,7 +1820,7 @@ retry:
 			goto retry;
 		raw_nat_from_node_info(raw_ne, &ne->ni);
 		nat_reset_flag(ne);
-		__clear_nat_cache_dirty(NM_I(sbi), ne);
+		__clear_nat_cache_dirty(NM_I(sbi), set, ne);
 		if (nat_get_blkaddr(ne) == NULL_ADDR) {
 			add_free_nid(sbi, nid, false);
 			spin_lock(&NM_I(sbi)->nid_list_lock);

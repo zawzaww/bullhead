@@ -707,8 +707,6 @@ TRACE_EVENT(f2fs_write_checkpoint,
 		__entry->msg)
 );
 
-<<<<<<< HEAD
-=======
 TRACE_EVENT(f2fs_issue_discard,
 
 	TP_PROTO(struct block_device *dev, block_t blkstart, block_t blklen),
@@ -958,7 +956,6 @@ DEFINE_EVENT(f2fs_sync_dirty_inodes, f2fs_sync_dirty_inodes_exit,
 	TP_ARGS(sb, type, count)
 );
 
->>>>>>> 8b9e7ad649e... f2fs: make sure trace all f2fs_issue_flush
 #endif /* _TRACE_F2FS_H */
 
  /* This part must be outside protection */
