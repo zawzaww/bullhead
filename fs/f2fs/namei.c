@@ -477,7 +477,173 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 out_dir:
 	if (old_dir_entry) {
+<<<<<<< HEAD
 		kunmap(old_dir_page);
+=======
+		f2fs_dentry_kunmap(old_inode, old_dir_page);
+		f2fs_put_page(old_dir_page, 0);
+	}
+out_old:
+	f2fs_dentry_kunmap(old_dir, old_page);
+	f2fs_put_page(old_page, 0);
+out:
+	return err;
+}
+
+#if 0
+static int f2fs_cross_rename(struct inode *old_dir, struct dentry *old_dentry,
+			     struct inode *new_dir, struct dentry *new_dentry)
+{
+	struct f2fs_sb_info *sbi = F2FS_I_SB(old_dir);
+	struct inode *old_inode = d_inode(old_dentry);
+	struct inode *new_inode = d_inode(new_dentry);
+	struct page *old_dir_page, *new_dir_page;
+	struct page *old_page, *new_page;
+	struct f2fs_dir_entry *old_dir_entry = NULL, *new_dir_entry = NULL;
+	struct f2fs_dir_entry *old_entry, *new_entry;
+	int old_nlink = 0, new_nlink = 0;
+	int err = -ENOENT;
+
+	if ((f2fs_encrypted_inode(old_dir) &&
+			!fscrypt_has_encryption_key(old_dir)) ||
+			(f2fs_encrypted_inode(new_dir) &&
+			!fscrypt_has_encryption_key(new_dir)))
+		return -ENOKEY;
+
+	if ((f2fs_encrypted_inode(old_dir) || f2fs_encrypted_inode(new_dir)) &&
+			(old_dir != new_dir) &&
+			(!fscrypt_has_permitted_context(new_dir, old_inode) ||
+			 !fscrypt_has_permitted_context(old_dir, new_inode)))
+		return -EPERM;
+
+	old_entry = f2fs_find_entry(old_dir, &old_dentry->d_name, &old_page);
+	if (!old_entry) {
+		if (IS_ERR(old_page))
+			err = PTR_ERR(old_page);
+		goto out;
+	}
+
+	new_entry = f2fs_find_entry(new_dir, &new_dentry->d_name, &new_page);
+	if (!new_entry) {
+		if (IS_ERR(new_page))
+			err = PTR_ERR(new_page);
+		goto out_old;
+	}
+
+	/* prepare for updating ".." directory entry info later */
+	if (old_dir != new_dir) {
+		if (S_ISDIR(old_inode->i_mode)) {
+			old_dir_entry = f2fs_parent_dir(old_inode,
+							&old_dir_page);
+			if (!old_dir_entry) {
+				if (IS_ERR(old_dir_page))
+					err = PTR_ERR(old_dir_page);
+				goto out_new;
+			}
+		}
+
+		if (S_ISDIR(new_inode->i_mode)) {
+			new_dir_entry = f2fs_parent_dir(new_inode,
+							&new_dir_page);
+			if (!new_dir_entry) {
+				if (IS_ERR(new_dir_page))
+					err = PTR_ERR(new_dir_page);
+				goto out_old_dir;
+			}
+		}
+	}
+
+	/*
+	 * If cross rename between file and directory those are not
+	 * in the same directory, we will inc nlink of file's parent
+	 * later, so we should check upper boundary of its nlink.
+	 */
+	if ((!old_dir_entry || !new_dir_entry) &&
+				old_dir_entry != new_dir_entry) {
+		old_nlink = old_dir_entry ? -1 : 1;
+		new_nlink = -old_nlink;
+		err = -EMLINK;
+		if ((old_nlink > 0 && old_dir->i_nlink >= F2FS_LINK_MAX) ||
+			(new_nlink > 0 && new_dir->i_nlink >= F2FS_LINK_MAX))
+			goto out_new_dir;
+	}
+
+	f2fs_balance_fs(sbi, true);
+
+	f2fs_lock_op(sbi);
+
+	err = update_dent_inode(old_inode, new_inode, &new_dentry->d_name);
+	if (err)
+		goto out_unlock;
+	if (file_enc_name(new_inode))
+		file_set_enc_name(old_inode);
+
+	err = update_dent_inode(new_inode, old_inode, &old_dentry->d_name);
+	if (err)
+		goto out_undo;
+	if (file_enc_name(old_inode))
+		file_set_enc_name(new_inode);
+
+	/* update ".." directory entry info of old dentry */
+	if (old_dir_entry)
+		f2fs_set_link(old_inode, old_dir_entry, old_dir_page, new_dir);
+
+	/* update ".." directory entry info of new dentry */
+	if (new_dir_entry)
+		f2fs_set_link(new_inode, new_dir_entry, new_dir_page, old_dir);
+
+	/* update directory entry info of old dir inode */
+	f2fs_set_link(old_dir, old_entry, old_page, new_inode);
+
+	down_write(&F2FS_I(old_inode)->i_sem);
+	file_lost_pino(old_inode);
+	up_write(&F2FS_I(old_inode)->i_sem);
+
+	old_dir->i_ctime = current_time(old_dir);
+	if (old_nlink) {
+		down_write(&F2FS_I(old_dir)->i_sem);
+		f2fs_i_links_write(old_dir, old_nlink > 0);
+		up_write(&F2FS_I(old_dir)->i_sem);
+	}
+	f2fs_mark_inode_dirty_sync(old_dir, false);
+
+	/* update directory entry info of new dir inode */
+	f2fs_set_link(new_dir, new_entry, new_page, old_inode);
+
+	down_write(&F2FS_I(new_inode)->i_sem);
+	file_lost_pino(new_inode);
+	up_write(&F2FS_I(new_inode)->i_sem);
+
+	new_dir->i_ctime = current_time(new_dir);
+	if (new_nlink) {
+		down_write(&F2FS_I(new_dir)->i_sem);
+		f2fs_i_links_write(new_dir, new_nlink > 0);
+		up_write(&F2FS_I(new_dir)->i_sem);
+	}
+	f2fs_mark_inode_dirty_sync(new_dir, false);
+
+	f2fs_unlock_op(sbi);
+
+	if (IS_DIRSYNC(old_dir) || IS_DIRSYNC(new_dir))
+		f2fs_sync_fs(sbi->sb, 1);
+	return 0;
+out_undo:
+	/*
+	 * Still we may fail to recover name info of f2fs_inode here
+	 * Drop it, once its name is set as encrypted
+	 */
+	update_dent_inode(old_inode, old_inode, &old_dentry->d_name);
+out_unlock:
+	f2fs_unlock_op(sbi);
+out_new_dir:
+	if (new_dir_entry) {
+		f2fs_dentry_kunmap(new_inode, new_dir_page);
+		f2fs_put_page(new_dir_page, 0);
+	}
+out_old_dir:
+	if (old_dir_entry) {
+		f2fs_dentry_kunmap(old_inode, old_dir_page);
+>>>>>>> 57841e3f4d4... f2fs: fix the fault of checking F2FS_LINK_MAX for rename inode
 		f2fs_put_page(old_dir_page, 0);
 	}
 	mutex_unlock_op(sbi, ilock);
