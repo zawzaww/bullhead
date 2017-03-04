@@ -443,7 +443,195 @@ void f2fs_balance_fs(struct f2fs_sb_info *sbi)
 	 */
 	if (has_not_enough_free_secs(sbi, 0)) {
 		mutex_lock(&sbi->gc_mutex);
+<<<<<<< HEAD
 		f2fs_gc(sbi);
+=======
+		f2fs_gc(sbi, false, false);
+	}
+}
+
+void f2fs_balance_fs_bg(struct f2fs_sb_info *sbi)
+{
+	/* try to shrink extent cache when there is no enough memory */
+	if (!available_free_memory(sbi, EXTENT_CACHE))
+		f2fs_shrink_extent_tree(sbi, EXTENT_CACHE_SHRINK_NUMBER);
+
+	/* check the # of cached NAT entries */
+	if (!available_free_memory(sbi, NAT_ENTRIES))
+		try_to_free_nats(sbi, NAT_ENTRY_PER_BLOCK);
+
+	if (!available_free_memory(sbi, FREE_NIDS))
+		try_to_free_nids(sbi, MAX_FREE_NIDS);
+	else
+		build_free_nids(sbi, false, false);
+
+	if (!is_idle(sbi))
+		return;
+
+	/* checkpoint is the only way to shrink partial cached entries */
+	if (!available_free_memory(sbi, NAT_ENTRIES) ||
+			!available_free_memory(sbi, INO_ENTRIES) ||
+			excess_prefree_segs(sbi) ||
+			excess_dirty_nats(sbi) ||
+			f2fs_time_over(sbi, CP_TIME)) {
+		if (test_opt(sbi, DATA_FLUSH)) {
+			struct blk_plug plug;
+
+			blk_start_plug(&plug);
+			sync_dirty_inodes(sbi, FILE_INODE);
+			blk_finish_plug(&plug);
+		}
+		f2fs_sync_fs(sbi->sb, true);
+		stat_inc_bg_cp_count(sbi->stat_info);
+	}
+}
+
+static int __submit_flush_wait(struct f2fs_sb_info *sbi,
+				struct block_device *bdev)
+{
+	struct bio *bio = f2fs_bio_alloc(0);
+	int ret;
+
+	bio->bi_rw = REQ_OP_WRITE;
+	bio->bi_bdev = bdev;
+	ret = submit_bio_wait(WRITE_FLUSH, bio);
+	bio_put(bio);
+
+	trace_f2fs_issue_flush(bdev, test_opt(sbi, NOBARRIER),
+				test_opt(sbi, FLUSH_MERGE), ret);
+	return ret;
+}
+
+static int submit_flush_wait(struct f2fs_sb_info *sbi)
+{
+	int ret = __submit_flush_wait(sbi, sbi->sb->s_bdev);
+	int i;
+
+	if (!sbi->s_ndevs || ret)
+		return ret;
+
+	for (i = 1; i < sbi->s_ndevs; i++) {
+		ret = __submit_flush_wait(sbi, FDEV(i).bdev);
+		if (ret)
+			break;
+	}
+	return ret;
+}
+
+static int issue_flush_thread(void *data)
+{
+	struct f2fs_sb_info *sbi = data;
+	struct flush_cmd_control *fcc = SM_I(sbi)->fcc_info;
+	wait_queue_head_t *q = &fcc->flush_wait_queue;
+repeat:
+	if (kthread_should_stop())
+		return 0;
+
+	if (!llist_empty(&fcc->issue_list)) {
+		struct flush_cmd *cmd, *next;
+		int ret;
+
+		fcc->dispatch_list = llist_del_all(&fcc->issue_list);
+		fcc->dispatch_list = llist_reverse_order(fcc->dispatch_list);
+
+		ret = submit_flush_wait(sbi);
+		llist_for_each_entry_safe(cmd, next,
+					  fcc->dispatch_list, llnode) {
+			cmd->ret = ret;
+			complete(&cmd->wait);
+		}
+		fcc->dispatch_list = NULL;
+	}
+
+	wait_event_interruptible(*q,
+		kthread_should_stop() || !llist_empty(&fcc->issue_list));
+	goto repeat;
+}
+
+int f2fs_issue_flush(struct f2fs_sb_info *sbi)
+{
+	struct flush_cmd_control *fcc = SM_I(sbi)->fcc_info;
+	struct flush_cmd cmd;
+
+	if (test_opt(sbi, NOBARRIER))
+		return 0;
+
+	if (!test_opt(sbi, FLUSH_MERGE))
+		return submit_flush_wait(sbi);
+
+	if (!atomic_read(&fcc->submit_flush)) {
+		int ret;
+
+		atomic_inc(&fcc->submit_flush);
+		ret = submit_flush_wait(sbi);
+		atomic_dec(&fcc->submit_flush);
+		return ret;
+	}
+
+	init_completion(&cmd.wait);
+
+	atomic_inc(&fcc->submit_flush);
+	llist_add(&cmd.llnode, &fcc->issue_list);
+
+	if (!fcc->dispatch_list)
+		wake_up(&fcc->flush_wait_queue);
+
+	if (fcc->f2fs_issue_flush) {
+		wait_for_completion(&cmd.wait);
+		atomic_dec(&fcc->submit_flush);
+	} else {
+		llist_del_all(&fcc->issue_list);
+		atomic_set(&fcc->submit_flush, 0);
+	}
+
+	return cmd.ret;
+}
+
+int create_flush_cmd_control(struct f2fs_sb_info *sbi)
+{
+	dev_t dev = sbi->sb->s_bdev->bd_dev;
+	struct flush_cmd_control *fcc;
+	int err = 0;
+
+	if (SM_I(sbi)->fcc_info) {
+		fcc = SM_I(sbi)->fcc_info;
+		goto init_thread;
+	}
+
+	fcc = kzalloc(sizeof(struct flush_cmd_control), GFP_KERNEL);
+	if (!fcc)
+		return -ENOMEM;
+	atomic_set(&fcc->submit_flush, 0);
+	init_waitqueue_head(&fcc->flush_wait_queue);
+	init_llist_head(&fcc->issue_list);
+	SM_I(sbi)->fcc_info = fcc;
+init_thread:
+	fcc->f2fs_issue_flush = kthread_run(issue_flush_thread, sbi,
+				"f2fs_flush-%u:%u", MAJOR(dev), MINOR(dev));
+	if (IS_ERR(fcc->f2fs_issue_flush)) {
+		err = PTR_ERR(fcc->f2fs_issue_flush);
+		kfree(fcc);
+		SM_I(sbi)->fcc_info = NULL;
+		return err;
+	}
+
+	return err;
+}
+
+void destroy_flush_cmd_control(struct f2fs_sb_info *sbi, bool free)
+{
+	struct flush_cmd_control *fcc = SM_I(sbi)->fcc_info;
+
+	if (fcc && fcc->f2fs_issue_flush) {
+		struct task_struct *flush_thread = fcc->f2fs_issue_flush;
+
+		fcc->f2fs_issue_flush = NULL;
+		kthread_stop(flush_thread);
+	}
+	if (free) {
+		kfree(fcc);
+		SM_I(sbi)->fcc_info = NULL;
+>>>>>>> 8b9e7ad649e... f2fs: make sure trace all f2fs_issue_flush
 	}
 }
 
