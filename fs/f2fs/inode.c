@@ -258,12 +258,36 @@ void f2fs_evict_inode(struct inode *inode)
 	if (inode->i_nlink || is_bad_inode(inode))
 		goto no_delete;
 
+<<<<<<< HEAD
+=======
+	remove_ino_entry(sbi, inode->i_ino, APPEND_INO);
+	remove_ino_entry(sbi, inode->i_ino, UPDATE_INO);
+
+>>>>>>> 110b9684eb5... f2fs: fix wrong error injection for evict_inode
 	sb_start_intwrite(inode->i_sb);
 	set_inode_flag(F2FS_I(inode), FI_NO_ALLOC);
 	i_size_write(inode, 0);
 
 	if (F2FS_HAS_BLOCKS(inode))
+<<<<<<< HEAD
 		f2fs_truncate(inode);
+=======
+		err = f2fs_truncate(inode);
+
+#ifdef CONFIG_F2FS_FAULT_INJECTION
+	if (time_to_inject(sbi, FAULT_EVICT_INODE)) {
+		f2fs_show_injection_info(FAULT_EVICT_INODE);
+		err = -EIO;
+	}
+#endif
+	if (!err) {
+		f2fs_lock_op(sbi);
+		err = remove_inode_page(inode);
+		f2fs_unlock_op(sbi);
+		if (err == -ENOENT)
+			err = 0;
+	}
+>>>>>>> 110b9684eb5... f2fs: fix wrong error injection for evict_inode
 
 	ilock = mutex_lock_op(sbi);
 	remove_inode_page(inode);
