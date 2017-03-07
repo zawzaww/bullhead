@@ -117,9 +117,7 @@ void locate_dirty_segment(struct f2fs_sb_info *sbi, unsigned int segno)
 	}
 
 	mutex_unlock(&dirty_i->seglist_lock);
-<<<<<<< HEAD
 	return;
-=======
 }
 
 static void __add_discard_cmd(struct f2fs_sb_info *sbi,
@@ -542,7 +540,6 @@ void release_discard_addrs(struct f2fs_sb_info *sbi)
 		list_del(&entry->list);
 		kmem_cache_free(discard_entry_slab, entry);
 	}
->>>>>>> 4e76e10f85d... f2fs: fix the fault of calculating blkstart twice
 }
 
 /*

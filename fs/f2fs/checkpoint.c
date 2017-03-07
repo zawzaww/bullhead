@@ -584,10 +584,8 @@ retry_flush_nodes:
 
 static void unblock_operations(struct f2fs_sb_info *sbi)
 {
-<<<<<<< HEAD
 	mutex_unlock(&sbi->node_write);
 	mutex_unlock_all(sbi);
-=======
 	up_write(&sbi->node_write);
 	f2fs_unlock_all(sbi);
 }
@@ -641,7 +639,6 @@ static void update_ckpt_flags(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	__set_ckpt_flags(ckpt, CP_CRC_RECOVERY_FLAG);
 
 	spin_unlock(&sbi->cp_lock);
->>>>>>> e788cefa560... f2fs: le32_to_cpu for ckpt->cp_pack_total_block_count
 }
 
 static void do_checkpoint(struct f2fs_sb_info *sbi, bool is_umount)

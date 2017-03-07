@@ -477,9 +477,7 @@ static int f2fs_rename(struct inode *old_dir, struct dentry *old_dentry,
 
 out_dir:
 	if (old_dir_entry) {
-<<<<<<< HEAD
 		kunmap(old_dir_page);
-=======
 		f2fs_dentry_kunmap(old_inode, old_dir_page);
 		f2fs_put_page(old_dir_page, 0);
 	}
@@ -643,7 +641,6 @@ out_new_dir:
 out_old_dir:
 	if (old_dir_entry) {
 		f2fs_dentry_kunmap(old_inode, old_dir_page);
->>>>>>> 57841e3f4d4... f2fs: fix the fault of checking F2FS_LINK_MAX for rename inode
 		f2fs_put_page(old_dir_page, 0);
 	}
 	mutex_unlock_op(sbi, ilock);

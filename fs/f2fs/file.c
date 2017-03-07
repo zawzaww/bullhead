@@ -102,7 +102,83 @@ static const struct vm_operations_struct f2fs_file_vm_ops = {
 	.remap_pages	= generic_file_remap_pages,
 };
 
+<<<<<<< HEAD
 int f2fs_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
+=======
+static int get_parent_ino(struct inode *inode, nid_t *pino)
+{
+	struct dentry *dentry;
+
+	if (file_enc_name(inode))
+		return 0;
+
+	inode = igrab(inode);
+	dentry = d_find_any_alias(inode);
+	iput(inode);
+	if (!dentry)
+		return 0;
+
+	if (update_dent_inode(inode, inode, &dentry->d_name)) {
+		dput(dentry);
+		return 0;
+	}
+
+	*pino = parent_ino(dentry);
+	dput(dentry);
+	return 1;
+}
+
+static inline bool need_do_checkpoint(struct inode *inode)
+{
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+	bool need_cp = false;
+
+	if (!S_ISREG(inode->i_mode) || inode->i_nlink != 1)
+		need_cp = true;
+	else if (is_sbi_flag_set(sbi, SBI_NEED_CP))
+		need_cp = true;
+	else if (file_wrong_pino(inode))
+		need_cp = true;
+	else if (!space_for_roll_forward(sbi))
+		need_cp = true;
+	else if (!is_checkpointed_node(sbi, F2FS_I(inode)->i_pino))
+		need_cp = true;
+	else if (test_opt(sbi, FASTBOOT))
+		need_cp = true;
+	else if (sbi->active_logs == 2)
+		need_cp = true;
+
+	return need_cp;
+}
+
+static bool need_inode_page_update(struct f2fs_sb_info *sbi, nid_t ino)
+{
+	struct page *i = find_get_page(NODE_MAPPING(sbi), ino);
+	bool ret = false;
+	/* But we need to avoid that there are some inode updates */
+	if ((i && PageDirty(i)) || need_inode_block_update(sbi, ino))
+		ret = true;
+	f2fs_put_page(i, 0);
+	return ret;
+}
+
+static void try_to_fix_pino(struct inode *inode)
+{
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+	nid_t pino;
+
+	down_write(&fi->i_sem);
+	if (file_wrong_pino(inode) && inode->i_nlink == 1 &&
+			get_parent_ino(inode, &pino)) {
+		f2fs_i_pino_write(inode, pino);
+		file_got_pino(inode);
+	}
+	up_write(&fi->i_sem);
+}
+
+static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
+						int datasync, bool atomic)
+>>>>>>> c2351e7aabf... f2fs: don't allow to get pino when filename is encrypted
 {
 	struct inode *inode = file->f_mapping->host;
 	struct f2fs_sb_info *sbi = F2FS_SB(inode->i_sb);
