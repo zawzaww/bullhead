@@ -644,6 +644,15 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
 		goto free_nm;
 	}
 
+<<<<<<< HEAD
+=======
+	f2fs_join_shrinker(sbi);
+
+	err = f2fs_build_stats(sbi);
+	if (err)
+		goto free_nm;
+
+>>>>>>> ff9aab6a0c6... f2fs: build stat_info before orphan inode recovery
 	/* if there are nt orphan nodes free them */
 	err = -EINVAL;
 	if (recover_orphan_inodes(sbi))
@@ -665,6 +674,26 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
 		goto free_root_inode;
 	}
 
+<<<<<<< HEAD
+=======
+	if (f2fs_proc_root)
+		sbi->s_proc = proc_mkdir(sb->s_id, f2fs_proc_root);
+
+	if (sbi->s_proc) {
+		proc_create_data("segment_info", S_IRUGO, sbi->s_proc,
+				 &f2fs_seq_segment_info_fops, sb);
+		proc_create_data("segment_bits", S_IRUGO, sbi->s_proc,
+				 &f2fs_seq_segment_bits_fops, sb);
+	}
+
+	sbi->s_kobj.kset = f2fs_kset;
+	init_completion(&sbi->s_kobj_unregister);
+	err = kobject_init_and_add(&sbi->s_kobj, &f2fs_ktype, NULL,
+							"%s", sb->s_id);
+	if (err)
+		goto free_proc;
+
+>>>>>>> ff9aab6a0c6... f2fs: build stat_info before orphan inode recovery
 	/* recover fsynced data */
 	if (!test_opt(sbi, DISABLE_ROLL_FORWARD)) {
 		err = recover_fsync_data(sbi);
@@ -691,13 +720,33 @@ static int f2fs_fill_super(struct super_block *sb, void *data, int silent)
 	}
 
 	return 0;
+<<<<<<< HEAD
 fail:
 	stop_gc_thread(sbi);
+=======
+
+free_kobj:
+	f2fs_sync_inode_meta(sbi);
+	kobject_del(&sbi->s_kobj);
+	kobject_put(&sbi->s_kobj);
+	wait_for_completion(&sbi->s_kobj_unregister);
+free_proc:
+	if (sbi->s_proc) {
+		remove_proc_entry("segment_info", sbi->s_proc);
+		remove_proc_entry("segment_bits", sbi->s_proc);
+		remove_proc_entry(sb->s_id, f2fs_proc_root);
+	}
+>>>>>>> ff9aab6a0c6... f2fs: build stat_info before orphan inode recovery
 free_root_inode:
 	dput(sb->s_root);
 	sb->s_root = NULL;
 free_node_inode:
 	iput(sbi->node_inode);
+<<<<<<< HEAD
+=======
+	mutex_unlock(&sbi->umount_mutex);
+	f2fs_destroy_stats(sbi);
+>>>>>>> ff9aab6a0c6... f2fs: build stat_info before orphan inode recovery
 free_nm:
 	destroy_node_manager(sbi);
 free_sm:
