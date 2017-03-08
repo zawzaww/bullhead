@@ -117,7 +117,432 @@ void locate_dirty_segment(struct f2fs_sb_info *sbi, unsigned int segno)
 	}
 
 	mutex_unlock(&dirty_i->seglist_lock);
+<<<<<<< HEAD
 	return;
+=======
+}
+
+static void __add_discard_cmd(struct f2fs_sb_info *sbi,
+			struct bio *bio, block_t lstart, block_t len)
+{
+	struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
+	struct list_head *cmd_list = &(dcc->discard_cmd_list);
+	struct discard_cmd *dc;
+
+	dc = f2fs_kmem_cache_alloc(discard_cmd_slab, GFP_NOFS);
+	INIT_LIST_HEAD(&dc->list);
+	dc->bio = bio;
+	bio->bi_private = dc;
+	dc->lstart = lstart;
+	dc->len = len;
+	dc->state = D_PREP;
+	init_completion(&dc->wait);
+
+	mutex_lock(&dcc->cmd_lock);
+	list_add_tail(&dc->list, cmd_list);
+	mutex_unlock(&dcc->cmd_lock);
+}
+
+static void __remove_discard_cmd(struct f2fs_sb_info *sbi, struct discard_cmd *dc)
+{
+	int err = dc->error;
+
+	if (dc->state == D_DONE)
+		atomic_dec(&(SM_I(sbi)->dcc_info->submit_discard));
+
+	if (err == -EOPNOTSUPP)
+		err = 0;
+
+	if (err)
+		f2fs_msg(sbi->sb, KERN_INFO,
+				"Issue discard failed, ret: %d", err);
+	bio_put(dc->bio);
+	list_del(&dc->list);
+	kmem_cache_free(discard_cmd_slab, dc);
+}
+
+/* This should be covered by global mutex, &sit_i->sentry_lock */
+void f2fs_wait_discard_bio(struct f2fs_sb_info *sbi, block_t blkaddr)
+{
+	struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
+	struct list_head *wait_list = &(dcc->discard_cmd_list);
+	struct discard_cmd *dc, *tmp;
+	struct blk_plug plug;
+
+	mutex_lock(&dcc->cmd_lock);
+
+	blk_start_plug(&plug);
+
+	list_for_each_entry_safe(dc, tmp, wait_list, list) {
+
+		if (blkaddr == NULL_ADDR) {
+			if (dc->state == D_PREP) {
+				dc->state = D_SUBMIT;
+				submit_bio(REQ_SYNC, dc->bio);
+				atomic_inc(&dcc->submit_discard);
+			}
+			continue;
+		}
+
+		if (dc->lstart <= blkaddr && blkaddr < dc->lstart + dc->len) {
+			if (dc->state == D_SUBMIT)
+				wait_for_completion_io(&dc->wait);
+			else
+				__remove_discard_cmd(sbi, dc);
+		}
+	}
+	blk_finish_plug(&plug);
+
+	/* this comes from f2fs_put_super */
+	if (blkaddr == NULL_ADDR) {
+		list_for_each_entry_safe(dc, tmp, wait_list, list) {
+			wait_for_completion_io(&dc->wait);
+			__remove_discard_cmd(sbi, dc);
+		}
+	}
+	mutex_unlock(&dcc->cmd_lock);
+}
+
+static void f2fs_submit_discard_endio(struct bio *bio, int err)
+{
+	struct discard_cmd *dc = (struct discard_cmd *)bio->bi_private;
+
+	dc->error = err;
+	complete(&dc->wait);
+	dc->state = D_DONE;
+}
+
+/* copied from block/blk-lib.c in 4.10-rc1 */
+static int __blkdev_issue_discard(struct block_device *bdev, sector_t sector,
+		sector_t nr_sects, gfp_t gfp_mask, int flags,
+		struct bio **biop)
+{
+	struct request_queue *q = bdev_get_queue(bdev);
+	struct bio *bio = *biop;
+	unsigned int granularity;
+	int op = REQ_WRITE | REQ_DISCARD;
+	int alignment;
+	sector_t bs_mask;
+
+	if (!q)
+		return -ENXIO;
+
+	if (!blk_queue_discard(q))
+		return -EOPNOTSUPP;
+
+	if (flags & BLKDEV_DISCARD_SECURE) {
+		if (!blk_queue_secdiscard(q))
+			return -EOPNOTSUPP;
+		op |= REQ_SECURE;
+	}
+
+	bs_mask = (bdev_logical_block_size(bdev) >> 9) - 1;
+	if ((sector | nr_sects) & bs_mask)
+		return -EINVAL;
+
+	/* Zero-sector (unknown) and one-sector granularities are the same.  */
+	granularity = max(q->limits.discard_granularity >> 9, 1U);
+	alignment = (bdev_discard_alignment(bdev) >> 9) % granularity;
+
+	while (nr_sects) {
+		unsigned int req_sects;
+		sector_t end_sect, tmp;
+
+		/* Make sure bi_size doesn't overflow */
+		req_sects = min_t(sector_t, nr_sects, UINT_MAX >> 9);
+
+		/**
+		 * If splitting a request, and the next starting sector would be
+		 * misaligned, stop the discard at the previous aligned sector.
+		 */
+		end_sect = sector + req_sects;
+		tmp = end_sect;
+		if (req_sects < nr_sects &&
+		    sector_div(tmp, granularity) != alignment) {
+			end_sect = end_sect - alignment;
+			sector_div(end_sect, granularity);
+			end_sect = end_sect * granularity + alignment;
+			req_sects = end_sect - sector;
+		}
+
+		if (bio) {
+			int ret = submit_bio_wait(0, bio);
+			bio_put(bio);
+			if (ret)
+				return ret;
+		}
+		bio = f2fs_bio_alloc(1);
+		bio->bi_sector = sector;
+		bio->bi_bdev = bdev;
+		bio_set_op_attrs(bio, op, 0);
+
+		bio->bi_size = req_sects << 9;
+		nr_sects -= req_sects;
+		sector = end_sect;
+
+		/*
+		 * We can loop for a long time in here, if someone does
+		 * full device discards (like mkfs). Be nice and allow
+		 * us to schedule out to avoid softlocking if preempt
+		 * is disabled.
+		 */
+		cond_resched();
+	}
+
+	*biop = bio;
+	return 0;
+}
+
+static int issue_discard_thread(void *data)
+{
+	struct f2fs_sb_info *sbi = data;
+	struct discard_cmd_control *dcc = SM_I(sbi)->dcc_info;
+	wait_queue_head_t *q = &dcc->discard_wait_queue;
+	struct list_head *cmd_list = &dcc->discard_cmd_list;
+	struct discard_cmd *dc, *tmp;
+	struct blk_plug plug;
+	int iter = 0;
+repeat:
+	if (kthread_should_stop())
+		return 0;
+
+	blk_start_plug(&plug);
+
+	mutex_lock(&dcc->cmd_lock);
+	list_for_each_entry_safe(dc, tmp, cmd_list, list) {
+		if (dc->state == D_PREP) {
+			dc->state = D_SUBMIT;
+			submit_bio(REQ_SYNC, dc->bio);
+			atomic_inc(&dcc->submit_discard);
+			if (iter++ > DISCARD_ISSUE_RATE)
+				break;
+		} else if (dc->state == D_DONE) {
+			__remove_discard_cmd(sbi, dc);
+		}
+	}
+	mutex_unlock(&dcc->cmd_lock);
+
+	blk_finish_plug(&plug);
+
+	iter = 0;
+	congestion_wait(BLK_RW_SYNC, HZ/50);
+
+	wait_event_interruptible(*q,
+		kthread_should_stop() || !list_empty(&dcc->discard_cmd_list));
+	goto repeat;
+}
+
+
+/* this function is copied from blkdev_issue_discard from block/blk-lib.c */
+static int __f2fs_issue_discard_async(struct f2fs_sb_info *sbi,
+		struct block_device *bdev, block_t blkstart, block_t blklen)
+{
+	struct bio *bio = NULL;
+	block_t lblkstart = blkstart;
+	int err;
+
+	trace_f2fs_issue_discard(bdev, blkstart, blklen);
+
+	if (sbi->s_ndevs) {
+		int devi = f2fs_target_device_index(sbi, blkstart);
+
+		blkstart -= FDEV(devi).start_blk;
+	}
+	err = __blkdev_issue_discard(bdev,
+				SECTOR_FROM_BLOCK(blkstart),
+				SECTOR_FROM_BLOCK(blklen),
+				GFP_NOFS, 0, &bio);
+	if (!err && bio) {
+		bio->bi_end_io = f2fs_submit_discard_endio;
+		__add_discard_cmd(sbi, bio, lblkstart, blklen);
+		wake_up(&SM_I(sbi)->dcc_info->discard_wait_queue);
+	}
+	return err;
+}
+
+#ifdef CONFIG_BLK_DEV_ZONED
+static int __f2fs_issue_discard_zone(struct f2fs_sb_info *sbi,
+		struct block_device *bdev, block_t blkstart, block_t blklen)
+{
+	sector_t sector, nr_sects;
+	block_t lblkstart = blkstart;
+	int devi = 0;
+
+	if (sbi->s_ndevs) {
+		devi = f2fs_target_device_index(sbi, blkstart);
+		blkstart -= FDEV(devi).start_blk;
+	}
+
+	/*
+	 * We need to know the type of the zone: for conventional zones,
+	 * use regular discard if the drive supports it. For sequential
+	 * zones, reset the zone write pointer.
+	 */
+	switch (get_blkz_type(sbi, bdev, blkstart)) {
+
+	case BLK_ZONE_TYPE_CONVENTIONAL:
+		if (!blk_queue_discard(bdev_get_queue(bdev)))
+			return 0;
+		return __f2fs_issue_discard_async(sbi, bdev, lblkstart, blklen);
+	case BLK_ZONE_TYPE_SEQWRITE_REQ:
+	case BLK_ZONE_TYPE_SEQWRITE_PREF:
+		sector = SECTOR_FROM_BLOCK(blkstart);
+		nr_sects = SECTOR_FROM_BLOCK(blklen);
+
+		if (sector & (bdev_zone_size(bdev) - 1) ||
+				nr_sects != bdev_zone_size(bdev)) {
+			f2fs_msg(sbi->sb, KERN_INFO,
+				"(%d) %s: Unaligned discard attempted (block %x + %x)",
+				devi, sbi->s_ndevs ? FDEV(devi).path: "",
+				blkstart, blklen);
+			return -EIO;
+		}
+		trace_f2fs_issue_reset_zone(bdev, blkstart);
+		return blkdev_reset_zones(bdev, sector,
+					  nr_sects, GFP_NOFS);
+	default:
+		/* Unknown zone type: broken device ? */
+		return -EIO;
+	}
+}
+#endif
+
+static int __issue_discard_async(struct f2fs_sb_info *sbi,
+		struct block_device *bdev, block_t blkstart, block_t blklen)
+{
+#ifdef CONFIG_BLK_DEV_ZONED
+	if (f2fs_sb_mounted_blkzoned(sbi->sb) &&
+				bdev_zoned_model(bdev) != BLK_ZONED_NONE)
+		return __f2fs_issue_discard_zone(sbi, bdev, blkstart, blklen);
+#endif
+	return __f2fs_issue_discard_async(sbi, bdev, blkstart, blklen);
+}
+
+static int f2fs_issue_discard(struct f2fs_sb_info *sbi,
+				block_t blkstart, block_t blklen)
+{
+	sector_t start = blkstart, len = 0;
+	struct block_device *bdev;
+	struct seg_entry *se;
+	unsigned int offset;
+	block_t i;
+	int err = 0;
+
+	bdev = f2fs_target_device(sbi, blkstart, NULL);
+
+	for (i = blkstart; i < blkstart + blklen; i++, len++) {
+		if (i != start) {
+			struct block_device *bdev2 =
+				f2fs_target_device(sbi, i, NULL);
+
+			if (bdev2 != bdev) {
+				err = __issue_discard_async(sbi, bdev,
+						start, len);
+				if (err)
+					return err;
+				bdev = bdev2;
+				start = i;
+				len = 0;
+			}
+		}
+
+		se = get_seg_entry(sbi, GET_SEGNO(sbi, i));
+		offset = GET_BLKOFF_FROM_SEG0(sbi, i);
+
+		if (!f2fs_test_and_set_bit(offset, se->discard_map))
+			sbi->discard_blks--;
+	}
+
+	if (len)
+		err = __issue_discard_async(sbi, bdev, start, len);
+	return err;
+}
+
+static void __add_discard_entry(struct f2fs_sb_info *sbi,
+		struct cp_control *cpc, struct seg_entry *se,
+		unsigned int start, unsigned int end)
+{
+	struct list_head *head = &SM_I(sbi)->dcc_info->discard_entry_list;
+	struct discard_entry *new, *last;
+
+	if (!list_empty(head)) {
+		last = list_last_entry(head, struct discard_entry, list);
+		if (START_BLOCK(sbi, cpc->trim_start) + start ==
+				last->blkaddr + last->len &&
+				last->len < MAX_DISCARD_BLOCKS(sbi)) {
+			last->len += end - start;
+			goto done;
+		}
+	}
+
+	new = f2fs_kmem_cache_alloc(discard_entry_slab, GFP_NOFS);
+	INIT_LIST_HEAD(&new->list);
+	new->blkaddr = START_BLOCK(sbi, cpc->trim_start) + start;
+	new->len = end - start;
+	list_add_tail(&new->list, head);
+done:
+	SM_I(sbi)->dcc_info->nr_discards += end - start;
+}
+
+static bool add_discard_addrs(struct f2fs_sb_info *sbi, struct cp_control *cpc,
+							bool check_only)
+{
+	int entries = SIT_VBLOCK_MAP_SIZE / sizeof(unsigned long);
+	int max_blocks = sbi->blocks_per_seg;
+	struct seg_entry *se = get_seg_entry(sbi, cpc->trim_start);
+	unsigned long *cur_map = (unsigned long *)se->cur_valid_map;
+	unsigned long *ckpt_map = (unsigned long *)se->ckpt_valid_map;
+	unsigned long *discard_map = (unsigned long *)se->discard_map;
+	unsigned long *dmap = SIT_I(sbi)->tmp_map;
+	unsigned int start = 0, end = -1;
+	bool force = (cpc->reason == CP_DISCARD);
+	int i;
+
+	if (se->valid_blocks == max_blocks || !f2fs_discard_en(sbi))
+		return false;
+
+	if (!force) {
+		if (!test_opt(sbi, DISCARD) || !se->valid_blocks ||
+			SM_I(sbi)->dcc_info->nr_discards >=
+				SM_I(sbi)->dcc_info->max_discards)
+			return false;
+	}
+
+	/* SIT_VBLOCK_MAP_SIZE should be multiple of sizeof(unsigned long) */
+	for (i = 0; i < entries; i++)
+		dmap[i] = force ? ~ckpt_map[i] & ~discard_map[i] :
+				(cur_map[i] ^ ckpt_map[i]) & ckpt_map[i];
+
+	while (force || SM_I(sbi)->dcc_info->nr_discards <=
+				SM_I(sbi)->dcc_info->max_discards) {
+		start = __find_rev_next_bit(dmap, max_blocks, end + 1);
+		if (start >= max_blocks)
+			break;
+
+		end = __find_rev_next_zero_bit(dmap, max_blocks, start + 1);
+		if (force && start && end != max_blocks
+					&& (end - start) < cpc->trim_minlen)
+			continue;
+
+		if (check_only)
+			return true;
+
+		__add_discard_entry(sbi, cpc, se, start, end);
+	}
+	return false;
+}
+
+void release_discard_addrs(struct f2fs_sb_info *sbi)
+{
+	struct list_head *head = &(SM_I(sbi)->dcc_info->discard_entry_list);
+	struct discard_entry *entry, *this;
+
+	/* drop caches */
+	list_for_each_entry_safe(entry, this, head, list) {
+		list_del(&entry->list);
+		kmem_cache_free(discard_entry_slab, entry);
+	}
+>>>>>>> 4e76e10f85d... f2fs: fix the fault of calculating blkstart twice
 }
 
 /*
