@@ -257,6 +257,45 @@ static struct super_operations f2fs_sops = {
 	.statfs		= f2fs_statfs,
 };
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_F2FS_FS_ENCRYPTION
+static int f2fs_get_context(struct inode *inode, void *ctx, size_t len)
+{
+	return f2fs_getxattr(inode, F2FS_XATTR_INDEX_ENCRYPTION,
+				F2FS_XATTR_NAME_ENCRYPTION_CONTEXT,
+				ctx, len, NULL);
+}
+
+static int f2fs_set_context(struct inode *inode, const void *ctx, size_t len,
+							void *fs_data)
+{
+	return f2fs_setxattr(inode, F2FS_XATTR_INDEX_ENCRYPTION,
+				F2FS_XATTR_NAME_ENCRYPTION_CONTEXT,
+				ctx, len, fs_data, XATTR_CREATE);
+}
+
+static unsigned f2fs_max_namelen(struct inode *inode)
+{
+	return S_ISLNK(inode->i_mode) ?
+			inode->i_sb->s_blocksize : F2FS_NAME_LEN;
+}
+
+static const struct fscrypt_operations f2fs_cryptops = {
+	.key_prefix	= "f2fs:",
+	.get_context	= f2fs_get_context,
+	.set_context	= f2fs_set_context,
+	.is_encrypted	= f2fs_encrypted_inode,
+	.empty_dir	= f2fs_empty_dir,
+	.max_namelen	= f2fs_max_namelen,
+};
+#else
+static const struct fscrypt_operations f2fs_cryptops = {
+	.is_encrypted	= f2fs_encrypted_inode,
+};
+#endif
+
+>>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 static struct inode *f2fs_nfs_get_inode(struct super_block *sb,
 		u64 ino, u32 generation)
 {
@@ -484,6 +523,152 @@ static void init_sb_info(struct f2fs_sb_info *sbi)
 
 	for (i = 0; i < NR_COUNT_TYPE; i++)
 		atomic_set(&sbi->nr_pages[i], 0);
+<<<<<<< HEAD
+=======
+
+	INIT_LIST_HEAD(&sbi->s_list);
+	mutex_init(&sbi->umount_mutex);
+	mutex_init(&sbi->wio_mutex[NODE]);
+	mutex_init(&sbi->wio_mutex[DATA]);
+	spin_lock_init(&sbi->cp_lock);
+}
+
+static int init_percpu_info(struct f2fs_sb_info *sbi)
+{
+	int err;
+
+	err = percpu_counter_init(&sbi->alloc_valid_block_count, 0);
+	if (err)
+		return err;
+
+	return percpu_counter_init(&sbi->total_valid_inode_count, 0);
+}
+
+#ifdef CONFIG_BLK_DEV_ZONED
+static int init_blkz_info(struct f2fs_sb_info *sbi, int devi)
+{
+	struct block_device *bdev = FDEV(devi).bdev;
+	sector_t nr_sectors = bdev->bd_part->nr_sects;
+	sector_t sector = 0;
+	struct blk_zone *zones;
+	unsigned int i, nr_zones;
+	unsigned int n = 0;
+	int err = -EIO;
+
+	if (!f2fs_sb_mounted_blkzoned(sbi->sb))
+		return 0;
+
+	if (sbi->blocks_per_blkz && sbi->blocks_per_blkz !=
+				SECTOR_TO_BLOCK(bdev_zone_size(bdev)))
+		return -EINVAL;
+	sbi->blocks_per_blkz = SECTOR_TO_BLOCK(bdev_zone_size(bdev));
+	if (sbi->log_blocks_per_blkz && sbi->log_blocks_per_blkz !=
+				__ilog2_u32(sbi->blocks_per_blkz))
+		return -EINVAL;
+	sbi->log_blocks_per_blkz = __ilog2_u32(sbi->blocks_per_blkz);
+	FDEV(devi).nr_blkz = SECTOR_TO_BLOCK(nr_sectors) >>
+					sbi->log_blocks_per_blkz;
+	if (nr_sectors & (bdev_zone_size(bdev) - 1))
+		FDEV(devi).nr_blkz++;
+
+	FDEV(devi).blkz_type = kmalloc(FDEV(devi).nr_blkz, GFP_KERNEL);
+	if (!FDEV(devi).blkz_type)
+		return -ENOMEM;
+
+#define F2FS_REPORT_NR_ZONES   4096
+
+	zones = kcalloc(F2FS_REPORT_NR_ZONES, sizeof(struct blk_zone),
+			GFP_KERNEL);
+	if (!zones)
+		return -ENOMEM;
+
+	/* Get block zones type */
+	while (zones && sector < nr_sectors) {
+
+		nr_zones = F2FS_REPORT_NR_ZONES;
+		err = blkdev_report_zones(bdev, sector,
+					  zones, &nr_zones,
+					  GFP_KERNEL);
+		if (err)
+			break;
+		if (!nr_zones) {
+			err = -EIO;
+			break;
+		}
+
+		for (i = 0; i < nr_zones; i++) {
+			FDEV(devi).blkz_type[n] = zones[i].type;
+			sector += zones[i].len;
+			n++;
+		}
+	}
+
+	kfree(zones);
+
+	return err;
+}
+#endif
+
+/*
+ * Read f2fs raw super block.
+ * Because we have two copies of super block, so read both of them
+ * to get the first valid one. If any one of them is broken, we pass
+ * them recovery flag back to the caller.
+ */
+static int read_raw_super_block(struct f2fs_sb_info *sbi,
+			struct f2fs_super_block **raw_super,
+			int *valid_super_block, int *recovery)
+{
+	struct super_block *sb = sbi->sb;
+	int block;
+	struct buffer_head *bh;
+	struct f2fs_super_block *super;
+	int err = 0;
+
+	super = kzalloc(sizeof(struct f2fs_super_block), GFP_KERNEL);
+	if (!super)
+		return -ENOMEM;
+
+	for (block = 0; block < 2; block++) {
+		bh = sb_bread(sb, block);
+		if (!bh) {
+			f2fs_msg(sb, KERN_ERR, "Unable to read %dth superblock",
+				block + 1);
+			err = -EIO;
+			continue;
+		}
+
+		/* sanity checking of raw super */
+		if (sanity_check_raw_super(sbi, bh)) {
+			f2fs_msg(sb, KERN_ERR,
+				"Can't find valid F2FS filesystem in %dth superblock",
+				block + 1);
+			err = -EINVAL;
+			brelse(bh);
+			continue;
+		}
+
+		if (!*raw_super) {
+			memcpy(super, bh->b_data + F2FS_SUPER_OFFSET,
+							sizeof(*super));
+			*valid_super_block = block;
+			*raw_super = super;
+		}
+		brelse(bh);
+	}
+
+	/* Fail to read any one of the superblocks*/
+	if (err < 0)
+		*recovery = 1;
+
+	/* No valid superblock */
+	if (!*raw_super)
+		kfree(super);
+	else
+		err = 0;
+
+	return err;
+>>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 }
 
 static int validate_superblock(struct super_block *sb,

@@ -17,6 +17,58 @@
 #include <linux/slab.h>
 #include <linux/crc32.h>
 #include <linux/magic.h>
+<<<<<<< HEAD
+=======
+#include <linux/kobject.h>
+#include <linux/sched.h>
+#include <linux/vmalloc.h>
+#include <linux/bio.h>
+#include <linux/blkdev.h>
+#ifdef CONFIG_F2FS_FS_ENCRYPTION
+#include <linux/fscrypt_supp.h>
+#else
+#include <linux/fscrypt_notsupp.h>
+#endif
+#include <crypto/hash.h>
+#include <linux/writeback.h>
+
+#ifdef CONFIG_F2FS_CHECK_FS
+#define f2fs_bug_on(sbi, condition)	BUG_ON(condition)
+#define f2fs_down_write(x, y)	down_write(x)
+#else
+#define f2fs_bug_on(sbi, condition)					\
+	do {								\
+		if (unlikely(condition)) {				\
+			WARN_ON(1);					\
+			set_sbi_flag(sbi, SBI_NEED_FSCK);		\
+		}							\
+	} while (0)
+#endif
+
+#ifdef CONFIG_F2FS_FAULT_INJECTION
+enum {
+	FAULT_KMALLOC,
+	FAULT_PAGE_ALLOC,
+	FAULT_ALLOC_NID,
+	FAULT_ORPHAN,
+	FAULT_BLOCK,
+	FAULT_DIR_DEPTH,
+	FAULT_EVICT_INODE,
+	FAULT_IO,
+	FAULT_CHECKPOINT,
+	FAULT_MAX,
+};
+
+struct f2fs_fault_info {
+	atomic_t inject_ops;
+	unsigned int inject_rate;
+	unsigned int inject_type;
+};
+
+extern char *fault_name[FAULT_MAX];
+#define IS_FAULT_SET(fi, type) (fi->inject_type & (1 << (type)))
+#endif
+>>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 /*
  * For mount options
@@ -414,7 +466,17 @@ struct f2fs_sb_info {
 	struct super_block *sb;			/* pointer to VFS super block */
 	struct buffer_head *raw_super_buf;	/* buffer head of raw sb */
 	struct f2fs_super_block *raw_super;	/* raw super block pointer */
+<<<<<<< HEAD
 	int s_dirty;				/* dirty flag for checkpoint */
+=======
+	int valid_super_block;			/* valid super block no */
+	unsigned long s_flag;				/* flags for sbi */
+
+#ifdef CONFIG_BLK_DEV_ZONED
+	unsigned int blocks_per_blkz;		/* F2FS blocks per zone */
+	unsigned int log_blocks_per_blkz;	/* log2 F2FS blocks per zone */
+#endif
+>>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 	/* for node-related operations */
 	struct f2fs_nm_info *nm_info;		/* node manager */
@@ -1257,4 +1319,140 @@ extern const struct address_space_operations f2fs_meta_aops;
 extern const struct inode_operations f2fs_dir_inode_operations;
 extern const struct inode_operations f2fs_symlink_inode_operations;
 extern const struct inode_operations f2fs_special_inode_operations;
+<<<<<<< HEAD
+=======
+extern struct kmem_cache *inode_entry_slab;
+
+/*
+ * inline.c
+ */
+bool f2fs_may_inline_data(struct inode *inode);
+bool f2fs_may_inline_dentry(struct inode *inode);
+void read_inline_data(struct page *page, struct page *ipage);
+bool truncate_inline_inode(struct page *ipage, u64 from);
+int f2fs_read_inline_data(struct inode *inode, struct page *page);
+int f2fs_convert_inline_page(struct dnode_of_data *dn, struct page *page);
+int f2fs_convert_inline_inode(struct inode *inode);
+int f2fs_write_inline_data(struct inode *inode, struct page *page);
+bool recover_inline_data(struct inode *inode, struct page *npage);
+struct f2fs_dir_entry *find_in_inline_dir(struct inode *dir,
+			struct fscrypt_name *fname, struct page **res_page);
+int make_empty_inline_dir(struct inode *inode, struct inode *parent,
+			struct page *ipage);
+int f2fs_add_inline_entry(struct inode *dir, const struct qstr *new_name,
+			const struct qstr *orig_name,
+			struct inode *inode, nid_t ino, umode_t mode);
+void f2fs_delete_inline_entry(struct f2fs_dir_entry *dentry, struct page *page,
+			struct inode *dir, struct inode *inode);
+bool f2fs_empty_inline_dir(struct inode *dir);
+int f2fs_read_inline_dir(struct file *file, void *dirent, filldir_t filldir,
+						struct fscrypt_str *fstr);
+int f2fs_inline_data_fiemap(struct inode *inode,
+			struct fiemap_extent_info *fieinfo,
+			__u64 start, __u64 len);
+
+/*
+ * shrinker.c
+ */
+int f2fs_shrink_count(struct shrinker *shrink,
+			struct shrink_control *sc);
+int f2fs_shrink_scan(struct shrinker *shrink,
+			struct shrink_control *sc);
+void f2fs_join_shrinker(struct f2fs_sb_info *sbi);
+void f2fs_leave_shrinker(struct f2fs_sb_info *sbi);
+
+/*
+ * extent_cache.c
+ */
+unsigned int f2fs_shrink_extent_tree(struct f2fs_sb_info *sbi, int nr_shrink);
+bool f2fs_init_extent_tree(struct inode *inode, struct f2fs_extent *i_ext);
+void f2fs_drop_extent_tree(struct inode *inode);
+unsigned int f2fs_destroy_extent_node(struct inode *inode);
+void f2fs_destroy_extent_tree(struct inode *inode);
+bool f2fs_lookup_extent_cache(struct inode *inode, pgoff_t pgofs,
+			struct extent_info *ei);
+void f2fs_update_extent_cache(struct dnode_of_data *dn);
+void f2fs_update_extent_cache_range(struct dnode_of_data *dn,
+			pgoff_t fofs, block_t blkaddr, unsigned int len);
+void init_extent_cache_info(struct f2fs_sb_info *sbi);
+int __init create_extent_cache(void);
+void destroy_extent_cache(void);
+
+/*
+ * crypto support
+ */
+static inline bool f2fs_encrypted_inode(struct inode *inode)
+{
+	return file_is_encrypt(inode);
+}
+
+static inline void f2fs_set_encrypted_inode(struct inode *inode)
+{
+#ifdef CONFIG_F2FS_FS_ENCRYPTION
+	file_set_encrypt(inode);
+#endif
+}
+
+static inline bool f2fs_bio_encrypted(struct bio *bio)
+{
+	return bio->bi_private != NULL;
+}
+
+static inline int f2fs_sb_has_crypto(struct super_block *sb)
+{
+	return F2FS_HAS_FEATURE(sb, F2FS_FEATURE_ENCRYPT);
+}
+
+static inline int f2fs_sb_mounted_blkzoned(struct super_block *sb)
+{
+	return F2FS_HAS_FEATURE(sb, F2FS_FEATURE_BLKZONED);
+}
+
+#ifdef CONFIG_BLK_DEV_ZONED
+static inline int get_blkz_type(struct f2fs_sb_info *sbi,
+			struct block_device *bdev, block_t blkaddr)
+{
+	unsigned int zno = blkaddr >> sbi->log_blocks_per_blkz;
+	int i;
+
+	for (i = 0; i < sbi->s_ndevs; i++)
+		if (FDEV(i).bdev == bdev)
+			return FDEV(i).blkz_type[zno];
+	return -EINVAL;
+}
+#endif
+
+static inline bool f2fs_discard_en(struct f2fs_sb_info *sbi)
+{
+	struct request_queue *q = bdev_get_queue(sbi->sb->s_bdev);
+
+	return blk_queue_discard(q) || f2fs_sb_mounted_blkzoned(sbi->sb);
+}
+
+static inline void set_opt_mode(struct f2fs_sb_info *sbi, unsigned int mt)
+{
+	clear_opt(sbi, ADAPTIVE);
+	clear_opt(sbi, LFS);
+
+	switch (mt) {
+	case F2FS_MOUNT_ADAPTIVE:
+		set_opt(sbi, ADAPTIVE);
+		break;
+	case F2FS_MOUNT_LFS:
+		set_opt(sbi, LFS);
+		break;
+	}
+}
+
+static inline bool f2fs_may_encrypt(struct inode *inode)
+{
+#ifdef CONFIG_F2FS_FS_ENCRYPTION
+	mode_t mode = inode->i_mode;
+
+	return (S_ISREG(mode) || S_ISDIR(mode) || S_ISLNK(mode));
+#else
+	return 0;
+#endif
+}
+>>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 #endif
