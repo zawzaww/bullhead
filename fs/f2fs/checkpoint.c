@@ -584,8 +584,64 @@ retry_flush_nodes:
 
 static void unblock_operations(struct f2fs_sb_info *sbi)
 {
+<<<<<<< HEAD
 	mutex_unlock(&sbi->node_write);
 	mutex_unlock_all(sbi);
+=======
+	up_write(&sbi->node_write);
+	f2fs_unlock_all(sbi);
+}
+
+static void wait_on_all_pages_writeback(struct f2fs_sb_info *sbi)
+{
+	DEFINE_WAIT(wait);
+
+	for (;;) {
+		prepare_to_wait(&sbi->cp_wait, &wait, TASK_UNINTERRUPTIBLE);
+
+		if (!get_pages(sbi, F2FS_WB_CP_DATA))
+			break;
+
+		io_schedule_timeout(5*HZ);
+	}
+	finish_wait(&sbi->cp_wait, &wait);
+}
+
+static void update_ckpt_flags(struct f2fs_sb_info *sbi, struct cp_control *cpc)
+{
+	unsigned long orphan_num = sbi->im[ORPHAN_INO].ino_num;
+	struct f2fs_checkpoint *ckpt = F2FS_CKPT(sbi);
+
+	spin_lock(&sbi->cp_lock);
+
+	if (cpc->reason == CP_UMOUNT &&
+			le32_to_cpu(ckpt->cp_pack_total_block_count) >
+			sbi->blocks_per_seg - NM_I(sbi)->nat_bits_blocks)
+		disable_nat_bits(sbi, false);
+
+	if (cpc->reason == CP_UMOUNT)
+		__set_ckpt_flags(ckpt, CP_UMOUNT_FLAG);
+	else
+		__clear_ckpt_flags(ckpt, CP_UMOUNT_FLAG);
+
+	if (cpc->reason == CP_FASTBOOT)
+		__set_ckpt_flags(ckpt, CP_FASTBOOT_FLAG);
+	else
+		__clear_ckpt_flags(ckpt, CP_FASTBOOT_FLAG);
+
+	if (orphan_num)
+		__set_ckpt_flags(ckpt, CP_ORPHAN_PRESENT_FLAG);
+	else
+		__clear_ckpt_flags(ckpt, CP_ORPHAN_PRESENT_FLAG);
+
+	if (is_sbi_flag_set(sbi, SBI_NEED_FSCK))
+		__set_ckpt_flags(ckpt, CP_FSCK_FLAG);
+
+	/* set this flag to activate crc|cp_ver for recovery */
+	__set_ckpt_flags(ckpt, CP_CRC_RECOVERY_FLAG);
+
+	spin_unlock(&sbi->cp_lock);
+>>>>>>> e788cefa560... f2fs: le32_to_cpu for ckpt->cp_pack_total_block_count
 }
 
 static void do_checkpoint(struct f2fs_sb_info *sbi, bool is_umount)
