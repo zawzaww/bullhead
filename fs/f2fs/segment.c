@@ -20,6 +20,420 @@
 #include "node.h"
 #include <trace/events/f2fs.h>
 
+<<<<<<< HEAD
+=======
+#define __reverse_ffz(x) __reverse_ffs(~(x))
+
+static struct kmem_cache *discard_entry_slab;
+static struct kmem_cache *discard_cmd_slab;
+static struct kmem_cache *sit_entry_set_slab;
+static struct kmem_cache *inmem_entry_slab;
+
+/**
+ * Copied from latest lib/llist.c
+ * llist_for_each_entry_safe - iterate over some deleted entries of
+ *                             lock-less list of given type
+ *			       safe against removal of list entry
+ * @pos:	the type * to use as a loop cursor.
+ * @n:		another type * to use as temporary storage
+ * @node:	the first entry of deleted list entries.
+ * @member:	the name of the llist_node with the struct.
+ *
+ * In general, some entries of the lock-less list can be traversed
+ * safely only after being removed from list, so start with an entry
+ * instead of list head.
+ *
+ * If being used on entries deleted from lock-less list directly, the
+ * traverse order is from the newest to the oldest added entry.  If
+ * you want to traverse from the oldest to the newest, you must
+ * reverse the order by yourself before traversing.
+ */
+#define llist_for_each_entry_safe(pos, n, node, member)			       \
+	for (pos = llist_entry((node), typeof(*pos), member);		       \
+		&pos->member != NULL &&					       \
+		(n = llist_entry(pos->member.next, typeof(*n), member), true); \
+		pos = n)
+
+/**
+ * Copied from latest lib/llist.c
+ * llist_reverse_order - reverse order of a llist chain
+ * @head:	first item of the list to be reversed
+ *
+ * Reverse the order of a chain of llist entries and return the
+ * new first entry.
+ */
+struct llist_node *llist_reverse_order(struct llist_node *head)
+{
+	struct llist_node *new_head = NULL;
+
+	while (head) {
+		struct llist_node *tmp = head;
+		head = head->next;
+		tmp->next = new_head;
+		new_head = tmp;
+	}
+
+	return new_head;
+}
+
+/**
+ * Copied from latest linux/list.h
+ * list_last_entry - get the last element from a list
+ * @ptr:        the list head to take the element from.
+ * @type:       the type of the struct this is embedded in.
+ * @member:     the name of the list_struct within the struct.
+ *
+ * Note, that list is expected to be not empty.
+ */
+#define list_last_entry(ptr, type, member) \
+	list_entry((ptr)->prev, type, member)
+
+static unsigned long __reverse_ulong(unsigned char *str)
+{
+	unsigned long tmp = 0;
+	int shift = 24, idx = 0;
+
+#if BITS_PER_LONG == 64
+	shift = 56;
+#endif
+	while (shift >= 0) {
+		tmp |= (unsigned long)str[idx++] << shift;
+		shift -= BITS_PER_BYTE;
+	}
+	return tmp;
+}
+
+/*
+ * __reverse_ffs is copied from include/asm-generic/bitops/__ffs.h since
+ * MSB and LSB are reversed in a byte by f2fs_set_bit.
+ */
+static inline unsigned long __reverse_ffs(unsigned long word)
+{
+	int num = 0;
+
+#if BITS_PER_LONG == 64
+	if ((word & 0xffffffff00000000UL) == 0)
+		num += 32;
+	else
+		word >>= 32;
+#endif
+	if ((word & 0xffff0000) == 0)
+		num += 16;
+	else
+		word >>= 16;
+
+	if ((word & 0xff00) == 0)
+		num += 8;
+	else
+		word >>= 8;
+
+	if ((word & 0xf0) == 0)
+		num += 4;
+	else
+		word >>= 4;
+
+	if ((word & 0xc) == 0)
+		num += 2;
+	else
+		word >>= 2;
+
+	if ((word & 0x2) == 0)
+		num += 1;
+	return num;
+}
+
+/*
+ * __find_rev_next(_zero)_bit is copied from lib/find_next_bit.c because
+ * f2fs_set_bit makes MSB and LSB reversed in a byte.
+ * @size must be integral times of unsigned long.
+ * Example:
+ *                             MSB <--> LSB
+ *   f2fs_set_bit(0, bitmap) => 1000 0000
+ *   f2fs_set_bit(7, bitmap) => 0000 0001
+ */
+static unsigned long __find_rev_next_bit(const unsigned long *addr,
+			unsigned long size, unsigned long offset)
+{
+	const unsigned long *p = addr + BIT_WORD(offset);
+	unsigned long result = size;
+	unsigned long tmp;
+
+	if (offset >= size)
+		return size;
+
+	size -= (offset & ~(BITS_PER_LONG - 1));
+	offset %= BITS_PER_LONG;
+
+	while (1) {
+		if (*p == 0)
+			goto pass;
+
+		tmp = __reverse_ulong((unsigned char *)p);
+
+		tmp &= ~0UL >> offset;
+		if (size < BITS_PER_LONG)
+			tmp &= (~0UL << (BITS_PER_LONG - size));
+		if (tmp)
+			goto found;
+pass:
+		if (size <= BITS_PER_LONG)
+			break;
+		size -= BITS_PER_LONG;
+		offset = 0;
+		p++;
+	}
+	return result;
+found:
+	return result - size + __reverse_ffs(tmp);
+}
+
+static unsigned long __find_rev_next_zero_bit(const unsigned long *addr,
+			unsigned long size, unsigned long offset)
+{
+	const unsigned long *p = addr + BIT_WORD(offset);
+	unsigned long result = size;
+	unsigned long tmp;
+
+	if (offset >= size)
+		return size;
+
+	size -= (offset & ~(BITS_PER_LONG - 1));
+	offset %= BITS_PER_LONG;
+
+	while (1) {
+		if (*p == ~0UL)
+			goto pass;
+
+		tmp = __reverse_ulong((unsigned char *)p);
+
+		if (offset)
+			tmp |= ~0UL << (BITS_PER_LONG - offset);
+		if (size < BITS_PER_LONG)
+			tmp |= ~0UL >> size;
+		if (tmp != ~0UL)
+			goto found;
+pass:
+		if (size <= BITS_PER_LONG)
+			break;
+		size -= BITS_PER_LONG;
+		offset = 0;
+		p++;
+	}
+	return result;
+found:
+	return result - size + __reverse_ffz(tmp);
+}
+
+void register_inmem_page(struct inode *inode, struct page *page)
+{
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+	struct inmem_pages *new;
+
+	f2fs_trace_pid(page);
+
+	set_page_private(page, (unsigned long)ATOMIC_WRITTEN_PAGE);
+	SetPagePrivate(page);
+
+	new = f2fs_kmem_cache_alloc(inmem_entry_slab, GFP_NOFS);
+
+	/* add atomic page indices to the list */
+	new->page = page;
+	INIT_LIST_HEAD(&new->list);
+
+	/* increase reference count with clean state */
+	mutex_lock(&fi->inmem_lock);
+	get_page(page);
+	list_add_tail(&new->list, &fi->inmem_pages);
+	inc_page_count(F2FS_I_SB(inode), F2FS_INMEM_PAGES);
+	mutex_unlock(&fi->inmem_lock);
+
+	trace_f2fs_register_inmem_page(page, INMEM);
+}
+
+static int __revoke_inmem_pages(struct inode *inode,
+				struct list_head *head, bool drop, bool recover)
+{
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+	struct inmem_pages *cur, *tmp;
+	int err = 0;
+
+	list_for_each_entry_safe(cur, tmp, head, list) {
+		struct page *page = cur->page;
+
+		if (drop)
+			trace_f2fs_commit_inmem_page(page, INMEM_DROP);
+
+		lock_page(page);
+
+		if (recover) {
+			struct dnode_of_data dn;
+			struct node_info ni;
+
+			trace_f2fs_commit_inmem_page(page, INMEM_REVOKE);
+
+			set_new_dnode(&dn, inode, NULL, NULL, 0);
+			if (get_dnode_of_data(&dn, page->index, LOOKUP_NODE)) {
+				err = -EAGAIN;
+				goto next;
+			}
+			get_node_info(sbi, dn.nid, &ni);
+			f2fs_replace_block(sbi, &dn, dn.data_blkaddr,
+					cur->old_addr, ni.version, true, true);
+			f2fs_put_dnode(&dn);
+		}
+next:
+		/* we don't need to invalidate this in the sccessful status */
+		if (drop || recover)
+			ClearPageUptodate(page);
+		set_page_private(page, 0);
+		ClearPagePrivate(page);
+		f2fs_put_page(page, 1);
+
+		list_del(&cur->list);
+		kmem_cache_free(inmem_entry_slab, cur);
+		dec_page_count(F2FS_I_SB(inode), F2FS_INMEM_PAGES);
+	}
+	return err;
+}
+
+void drop_inmem_pages(struct inode *inode)
+{
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+
+	mutex_lock(&fi->inmem_lock);
+	__revoke_inmem_pages(inode, &fi->inmem_pages, true, false);
+	mutex_unlock(&fi->inmem_lock);
+
+	clear_inode_flag(inode, FI_ATOMIC_FILE);
+	stat_dec_atomic_write(inode);
+}
+
+void drop_inmem_page(struct inode *inode, struct page *page)
+{
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+	struct list_head *head = &fi->inmem_pages;
+	struct inmem_pages *cur = NULL;
+
+	f2fs_bug_on(sbi, !IS_ATOMIC_WRITTEN_PAGE(page));
+
+	mutex_lock(&fi->inmem_lock);
+	list_for_each_entry(cur, head, list) {
+		if (cur->page == page)
+			break;
+	}
+
+	f2fs_bug_on(sbi, !cur || cur->page != page);
+	list_del(&cur->list);
+	mutex_unlock(&fi->inmem_lock);
+
+	dec_page_count(sbi, F2FS_INMEM_PAGES);
+	kmem_cache_free(inmem_entry_slab, cur);
+
+	ClearPageUptodate(page);
+	set_page_private(page, 0);
+	ClearPagePrivate(page);
+	f2fs_put_page(page, 0);
+
+	trace_f2fs_commit_inmem_page(page, INMEM_INVALIDATE);
+}
+
+static int __commit_inmem_pages(struct inode *inode,
+					struct list_head *revoke_list)
+{
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+	struct inmem_pages *cur, *tmp;
+	struct f2fs_io_info fio = {
+		.sbi = sbi,
+		.type = DATA,
+		.op = REQ_OP_WRITE,
+		.op_flags = REQ_SYNC | REQ_NOIDLE | REQ_PRIO,
+		.encrypted_page = NULL,
+	};
+	pgoff_t last_idx = ULONG_MAX;
+	int err = 0;
+
+	list_for_each_entry_safe(cur, tmp, &fi->inmem_pages, list) {
+		struct page *page = cur->page;
+
+		lock_page(page);
+		if (page->mapping == inode->i_mapping) {
+			trace_f2fs_commit_inmem_page(page, INMEM);
+
+			set_page_dirty(page);
+			f2fs_wait_on_page_writeback(page, DATA, true);
+			if (clear_page_dirty_for_io(page)) {
+				inode_dec_dirty_pages(inode);
+				remove_dirty_inode(inode);
+			}
+
+			fio.page = page;
+			err = do_write_data_page(&fio);
+			if (err) {
+				unlock_page(page);
+				break;
+			}
+
+			/* record old blkaddr for revoking */
+			cur->old_addr = fio.old_blkaddr;
+			last_idx = page->index;
+		}
+		unlock_page(page);
+		list_move_tail(&cur->list, revoke_list);
+	}
+
+	if (last_idx != ULONG_MAX)
+		f2fs_submit_merged_bio_cond(sbi, inode, 0, last_idx,
+							DATA, WRITE);
+
+	if (!err)
+		__revoke_inmem_pages(inode, revoke_list, false, false);
+
+	return err;
+}
+
+int commit_inmem_pages(struct inode *inode)
+{
+	struct f2fs_sb_info *sbi = F2FS_I_SB(inode);
+	struct f2fs_inode_info *fi = F2FS_I(inode);
+	struct list_head revoke_list;
+	int err;
+
+	INIT_LIST_HEAD(&revoke_list);
+	f2fs_balance_fs(sbi, true);
+	f2fs_lock_op(sbi);
+
+	set_inode_flag(inode, FI_ATOMIC_COMMIT);
+
+	mutex_lock(&fi->inmem_lock);
+	err = __commit_inmem_pages(inode, &revoke_list);
+	if (err) {
+		int ret;
+		/*
+		 * try to revoke all committed pages, but still we could fail
+		 * due to no memory or other reason, if that happened, EAGAIN
+		 * will be returned, which means in such case, transaction is
+		 * already not integrity, caller should use journal to do the
+		 * recovery or rewrite & commit last transaction. For other
+		 * error number, revoking was done by filesystem itself.
+		 */
+		ret = __revoke_inmem_pages(inode, &revoke_list, false, true);
+		if (ret)
+			err = ret;
+
+		/* drop all uncommitted pages */
+		__revoke_inmem_pages(inode, &fi->inmem_pages, true, false);
+	}
+	mutex_unlock(&fi->inmem_lock);
+
+	clear_inode_flag(inode, FI_ATOMIC_COMMIT);
+
+	f2fs_unlock_op(sbi);
+	return err;
+}
+
+>>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 /*
  * This function balances dirty node and dentry pages.
  * In addition, it controls garbage collection.

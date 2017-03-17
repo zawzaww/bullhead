@@ -14,6 +14,7 @@
 		{ NODE,		"NODE" },				\
 		{ DATA,		"DATA" },				\
 		{ META,		"META" },				\
+<<<<<<< HEAD
 		{ META_FLUSH,	"META_FLUSH" })
 
 #define show_bio_type(type)						\
@@ -25,6 +26,39 @@
 		{ WRITE_SYNC, 	"WRITE_SYNC" },				\
 		{ WRITE_FLUSH,	"WRITE_FLUSH" },			\
 		{ WRITE_FUA, 	"WRITE_FUA" })
+=======
+		{ META_FLUSH,	"META_FLUSH" },				\
+		{ INMEM,	"INMEM" },				\
+		{ INMEM_DROP,	"INMEM_DROP" },				\
+		{ INMEM_INVALIDATE,	"INMEM_INVALIDATE" },		\
+		{ INMEM_REVOKE,	"INMEM_REVOKE" },			\
+		{ IPU,		"IN-PLACE" },				\
+		{ OPU,		"OUT-OF-PLACE" })
+
+#define F2FS_BIO_MASK(t)	(t & (READA | WRITE_FLUSH_FUA))
+#define F2FS_BIO_EXTRA_MASK(t)	(t & (REQ_META | REQ_PRIO))
+
+#define show_bio_type(op, op_flags)					\
+		show_bio_base((op|op_flags)), show_bio_extra((op|op_flags))
+
+#define show_bio_base(type)						\
+	__print_symbolic(F2FS_BIO_MASK(type),				\
+		{ READ, 		"READ" },			\
+		{ READA, 		"READAHEAD" },			\
+		{ READ_SYNC, 		"READ_SYNC" },			\
+		{ WRITE, 		"WRITE" },			\
+		{ WRITE_SYNC, 		"WRITE_SYNC" },			\
+		{ WRITE_FLUSH,		"WRITE_FLUSH" },		\
+		{ WRITE_FUA, 		"WRITE_FUA" },			\
+		{ WRITE_FLUSH_FUA,	"WRITE_FLUSH_FUA" })
+
+#define show_bio_extra(type)						\
+	__print_symbolic(F2FS_BIO_EXTRA_MASK(type),			\
+		{ REQ_META, 		"(M)" },			\
+		{ REQ_PRIO, 		"(P)" },			\
+		{ REQ_META | REQ_PRIO,	"(MP)" },			\
+		{ 0, " \b" })
+>>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 
 #define show_data_type(type)						\
 	__print_symbolic(type,						\

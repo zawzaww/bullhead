@@ -336,6 +336,81 @@ enum page_type {
 	META,
 	NR_PAGE_TYPE,
 	META_FLUSH,
+<<<<<<< HEAD
+=======
+	INMEM,		/* the below types are used by tracepoints only. */
+	INMEM_DROP,
+	INMEM_INVALIDATE,
+	INMEM_REVOKE,
+	IPU,
+	OPU,
+};
+
+struct f2fs_io_info {
+	struct f2fs_sb_info *sbi;	/* f2fs_sb_info pointer */
+	enum page_type type;	/* contains DATA/NODE/META/META_FLUSH */
+	int op;			/* contains REQ_OP_ */
+	int op_flags;		/* req_flag_bits */
+	block_t new_blkaddr;	/* new block address to be written */
+	block_t old_blkaddr;	/* old block address before Cow */
+	struct page *page;	/* page to be written */
+	struct page *encrypted_page;	/* encrypted page */
+	bool submitted;		/* indicate IO submission */
+};
+
+#define is_read_io(rw) (rw == READ)
+struct f2fs_bio_info {
+	struct f2fs_sb_info *sbi;	/* f2fs superblock */
+	struct bio *bio;		/* bios to merge */
+	sector_t last_block_in_bio;	/* last block number */
+	struct f2fs_io_info fio;	/* store buffered io info. */
+	struct rw_semaphore io_rwsem;	/* blocking op for bio */
+};
+
+#define FDEV(i)				(sbi->devs[i])
+#define RDEV(i)				(raw_super->devs[i])
+struct f2fs_dev_info {
+	struct block_device *bdev;
+	char path[MAX_PATH_LEN];
+	unsigned int total_segments;
+	block_t start_blk;
+	block_t end_blk;
+#ifdef CONFIG_BLK_DEV_ZONED
+	unsigned int nr_blkz;			/* Total number of zones */
+	u8 *blkz_type;				/* Array of zones type */
+#endif
+};
+
+enum inode_type {
+	DIR_INODE,			/* for dirty dir inode */
+	FILE_INODE,			/* for dirty regular/symlink inode */
+	DIRTY_META,			/* for all dirtied inode metadata */
+	NR_INODE_TYPE,
+};
+
+/* for inner inode cache management */
+struct inode_management {
+	struct radix_tree_root ino_root;	/* ino entry array */
+	spinlock_t ino_lock;			/* for ino entry lock */
+	struct list_head ino_list;		/* inode list head */
+	unsigned long ino_num;			/* number of entries */
+};
+
+/* For s_flag in struct f2fs_sb_info */
+enum {
+	SBI_IS_DIRTY,				/* dirty flag for checkpoint */
+	SBI_IS_CLOSE,				/* specify unmounting */
+	SBI_NEED_FSCK,				/* need fsck.f2fs to fix */
+	SBI_POR_DOING,				/* recovery is doing or not */
+	SBI_NEED_SB_WRITE,			/* need to recover superblock */
+	SBI_NEED_CP,				/* need to checkpoint */
+};
+
+enum {
+	CP_TIME,
+	REQ_TIME,
+	MAX_TIME,
+>>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 };
 
 struct f2fs_sb_info {
@@ -976,6 +1051,7 @@ void destroy_node_manager_caches(void);
 /*
  * segment.c
  */
+<<<<<<< HEAD
 void f2fs_balance_fs(struct f2fs_sb_info *);
 void invalidate_blocks(struct f2fs_sb_info *, block_t);
 void locate_dirty_segment(struct f2fs_sb_info *, unsigned int);
@@ -1002,6 +1078,56 @@ int lookup_journal_in_cursum(struct f2fs_summary_block *,
 void flush_sit_entries(struct f2fs_sb_info *);
 int build_segment_manager(struct f2fs_sb_info *);
 void destroy_segment_manager(struct f2fs_sb_info *);
+=======
+void register_inmem_page(struct inode *inode, struct page *page);
+void drop_inmem_pages(struct inode *inode);
+void drop_inmem_page(struct inode *inode, struct page *page);
+int commit_inmem_pages(struct inode *inode);
+void f2fs_balance_fs(struct f2fs_sb_info *sbi, bool need);
+void f2fs_balance_fs_bg(struct f2fs_sb_info *sbi);
+int f2fs_issue_flush(struct f2fs_sb_info *sbi);
+int create_flush_cmd_control(struct f2fs_sb_info *sbi);
+void destroy_flush_cmd_control(struct f2fs_sb_info *sbi, bool free);
+void invalidate_blocks(struct f2fs_sb_info *sbi, block_t addr);
+bool is_checkpointed_data(struct f2fs_sb_info *sbi, block_t blkaddr);
+void refresh_sit_entry(struct f2fs_sb_info *sbi, block_t old, block_t new);
+void f2fs_wait_discard_bio(struct f2fs_sb_info *sbi, block_t blkaddr);
+void clear_prefree_segments(struct f2fs_sb_info *sbi, struct cp_control *cpc);
+void release_discard_addrs(struct f2fs_sb_info *sbi);
+int npages_for_summary_flush(struct f2fs_sb_info *sbi, bool for_ra);
+void allocate_new_segments(struct f2fs_sb_info *sbi);
+int f2fs_trim_fs(struct f2fs_sb_info *sbi, struct fstrim_range *range);
+bool exist_trim_candidates(struct f2fs_sb_info *sbi, struct cp_control *cpc);
+struct page *get_sum_page(struct f2fs_sb_info *sbi, unsigned int segno);
+void update_meta_page(struct f2fs_sb_info *sbi, void *src, block_t blk_addr);
+void write_meta_page(struct f2fs_sb_info *sbi, struct page *page);
+void write_node_page(unsigned int nid, struct f2fs_io_info *fio);
+void write_data_page(struct dnode_of_data *dn, struct f2fs_io_info *fio);
+void rewrite_data_page(struct f2fs_io_info *fio);
+void __f2fs_replace_block(struct f2fs_sb_info *sbi, struct f2fs_summary *sum,
+			block_t old_blkaddr, block_t new_blkaddr,
+			bool recover_curseg, bool recover_newaddr);
+void f2fs_replace_block(struct f2fs_sb_info *sbi, struct dnode_of_data *dn,
+			block_t old_addr, block_t new_addr,
+			unsigned char version, bool recover_curseg,
+			bool recover_newaddr);
+void allocate_data_block(struct f2fs_sb_info *sbi, struct page *page,
+			block_t old_blkaddr, block_t *new_blkaddr,
+			struct f2fs_summary *sum, int type);
+void f2fs_wait_on_page_writeback(struct page *page,
+			enum page_type type, bool ordered);
+void f2fs_wait_on_encrypted_page_writeback(struct f2fs_sb_info *sbi,
+			block_t blkaddr);
+void write_data_summaries(struct f2fs_sb_info *sbi, block_t start_blk);
+void write_node_summaries(struct f2fs_sb_info *sbi, block_t start_blk);
+int lookup_journal_in_cursum(struct f2fs_journal *journal, int type,
+			unsigned int val, int alloc);
+void flush_sit_entries(struct f2fs_sb_info *sbi, struct cp_control *cpc);
+int build_segment_manager(struct f2fs_sb_info *sbi);
+void destroy_segment_manager(struct f2fs_sb_info *sbi);
+int __init create_segment_manager_caches(void);
+void destroy_segment_manager_caches(void);
+>>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 
 /*
  * checkpoint.c
