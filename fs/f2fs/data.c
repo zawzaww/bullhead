@@ -1948,7 +1948,8 @@ static ssize_t f2fs_direct_IO(int rw, struct kiocb *iocb,
 	return err;
 }
 
-static void f2fs_invalidate_data_page(struct page *page, unsigned int offset,
+
+void f2fs_invalidate_page(struct page *page, unsigned int offset,
 				      unsigned int length)
 {
 	struct inode *inode = page->mapping->host;
@@ -1976,6 +1977,7 @@ static void f2fs_invalidate_data_page(struct page *page, unsigned int offset,
 	set_page_private(page, 0);
 	ClearPagePrivate(page);
 }
+
 
 int f2fs_release_page(struct page *page, gfp_t wait)
 {
