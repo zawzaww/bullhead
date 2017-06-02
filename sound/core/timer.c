@@ -1984,10 +1984,10 @@ static ssize_t snd_timer_user_read(struct file *file, char __user *buffer,
 		result += unit;
 		buffer += unit;
 	}
- _error:
 	spin_unlock_irq(&tu->qlock);
-	mutex_unlock(&tu->ioctl_lock);
-	return result > 0 ? result : err;
+_error:
+	   mutex_unlock(&tu->ioctl_lock);
+	   return result > 0 ? result : err;
 }
 
 static unsigned int snd_timer_user_poll(struct file *file, poll_table * wait)
