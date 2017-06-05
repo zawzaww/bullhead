@@ -970,8 +970,14 @@ typedef struct sSirSmeScanChanReq
 #ifdef FEATURE_OEM_DATA_SUPPORT
 
 #ifndef OEM_DATA_REQ_SIZE
+<<<<<<< HEAD
 #define OEM_DATA_REQ_SIZE 280
 #endif
+=======
+#define OEM_DATA_REQ_SIZE 500
+#endif
+
+>>>>>>> 845f1f655c8e... qcacld-2.0: Make OEM response events wakeable
 #ifndef OEM_DATA_RSP_SIZE
 #define OEM_DATA_RSP_SIZE 1724
 #endif
