@@ -1,12 +1,7 @@
 VERSION = 3
 PATCHLEVEL = 10
-<<<<<<< HEAD
-SUBLEVEL = 73
-EXTRAVERSION = -PureZ-Kernel-v3.0
-=======
 SUBLEVEL = 107
-EXTRAVERSION =
->>>>>>> 0e3d5747a3e... Linux 3.10.107
+EXTRAVERSION = -PureZ-Kernel-v3.0
 NAME = TOSSUG Baby Fish
 
 # *DOCUMENTATION*
