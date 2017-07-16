@@ -1256,14 +1256,12 @@ static int add_free_nid(struct f2fs_nm_info *nm_i, nid_t nid, bool build)
 	struct nat_entry *ne;
 	bool allocated = false;
 
-<<<<<<< HEAD
 	if (nm_i->fcnt > 2 * MAX_FREE_NIDS)
 		return -1;
 
 	/* 0 nid should not be used */
 	if (nid == 0)
 		return 0;
-=======
 	spin_lock(&nm_i->nid_list_lock);
 	err = __insert_nid_to_list(sbi, i, FREE_NID_LIST, true);
 	spin_unlock(&nm_i->nid_list_lock);
@@ -1362,7 +1360,6 @@ static void scan_free_nid_bits(struct f2fs_sb_info *sbi)
 			continue;
 		for (idx = 0; idx < NAT_ENTRY_PER_BLOCK; idx++) {
 			nid_t nid;
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 
 	if (!build)
 		goto retry;
@@ -1504,17 +1501,14 @@ retry:
 		BUG_ON(i->state != NID_NEW);
 		*nid = i->nid;
 		i->state = NID_ALLOC;
-<<<<<<< HEAD
 		nm_i->fcnt--;
 		spin_unlock(&nm_i->free_nid_list_lock);
-=======
 		__insert_nid_to_list(sbi, i, ALLOC_NID_LIST, false);
 		nm_i->available_nids--;
 
 		update_free_nid_bitmap(sbi, *nid, false, false);
 
 		spin_unlock(&nm_i->nid_list_lock);
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 		return true;
 	}
 	spin_unlock(&nm_i->free_nid_list_lock);
@@ -1558,9 +1552,7 @@ void alloc_nid_failed(struct f2fs_sb_info *sbi, nid_t nid)
 		__del_from_free_nid_list(i);
 	} else {
 		i->state = NID_NEW;
-<<<<<<< HEAD
 		nm_i->fcnt++;
-=======
 		__insert_nid_to_list(sbi, i, FREE_NID_LIST, false);
 	}
 
@@ -1617,7 +1609,6 @@ void recover_inline_xattr(struct inode *inode, struct page *page)
 	if (!(ri->i_inline & F2FS_INLINE_XATTR)) {
 		clear_inode_flag(inode, FI_INLINE_XATTR);
 		goto update_inode;
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 	}
 	spin_unlock(&nm_i->free_nid_list_lock);
 }
@@ -1740,12 +1731,10 @@ retry:
 			write_unlock(&nm_i->nat_tree_lock);
 			continue;
 		}
-<<<<<<< HEAD
 		ne = grab_nat_entry(nm_i, nid);
 		if (!ne) {
 			write_unlock(&nm_i->nat_tree_lock);
 			goto retry;
-=======
 		raw_nat_from_node_info(raw_ne, &ne->ni);
 		nat_reset_flag(ne);
 		__clear_nat_cache_dirty(NM_I(sbi), ne);
@@ -1759,7 +1748,6 @@ retry:
 			spin_lock(&NM_I(sbi)->nid_list_lock);
 			update_free_nid_bitmap(sbi, nid, false, false);
 			spin_unlock(&NM_I(sbi)->nid_list_lock);
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 		}
 		nat_set_blkaddr(ne, le32_to_cpu(raw_ne.block_addr));
 		nat_set_ino(ne, le32_to_cpu(raw_ne.ino));
@@ -1901,8 +1889,6 @@ static int init_node_manager(struct f2fs_sb_info *sbi)
 					GFP_KERNEL);
 	if (!nm_i->nat_bitmap)
 		return -ENOMEM;
-<<<<<<< HEAD
-=======
 
 	err = __get_nat_bitmaps(sbi);
 	if (err)
@@ -1939,7 +1925,6 @@ static int init_free_nid_cache(struct f2fs_sb_info *sbi)
 
 	spin_lock_init(&nm_i->free_nid_lock);
 
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 	return 0;
 }
 
@@ -1991,16 +1976,13 @@ void destroy_node_manager(struct f2fs_sb_info *sbi)
 			__del_from_nat_cache(nm_i, e);
 		}
 	}
-<<<<<<< HEAD
 	BUG_ON(nm_i->nat_cnt);
 	write_unlock(&nm_i->nat_tree_lock);
-=======
 	up_write(&nm_i->nat_tree_lock);
 
 	f2fs_kvfree(nm_i->nat_block_bitmap);
 	f2fs_kvfree(nm_i->free_nid_bitmap);
 	f2fs_kvfree(nm_i->free_nid_count);
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 
 	kfree(nm_i->nat_bitmap);
 	sbi->nm_info = NULL;

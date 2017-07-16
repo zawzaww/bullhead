@@ -204,13 +204,10 @@ struct f2fs_nm_info {
 	spinlock_t free_nid_list_lock;	/* protect free nid list */
 	unsigned int fcnt;		/* the number of free node id */
 	struct mutex build_lock;	/* lock for build free nids */
-<<<<<<< HEAD
-=======
 	unsigned char (*free_nid_bitmap)[NAT_ENTRY_BITMAP_SIZE];
 	unsigned char *nat_block_bitmap;
 	unsigned short *free_nid_count;	/* free nid count of NAT block */
 	spinlock_t free_nid_lock;	/* protect updating of nid count */
->>>>>>> a5427c73615... f2fs: skip scanning free nid bitmap of full NAT blocks
 
 	/* for checkpoint */
 	char *nat_bitmap;		/* NAT bitmap pointer */
