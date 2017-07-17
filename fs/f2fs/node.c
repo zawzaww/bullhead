@@ -135,9 +135,7 @@ static void __del_from_nat_cache(struct f2fs_nm_info *nm_i, struct nat_entry *e)
 	kmem_cache_free(nat_entry_slab, e);
 }
 
-<<<<<<< HEAD
 int is_checkpointed_node(struct f2fs_sb_info *sbi, nid_t nid)
-=======
 static void __set_nat_cache_dirty(struct f2fs_nm_info *nm_i,
 						struct nat_entry *ne)
 {
@@ -197,7 +195,6 @@ int need_dentry_mark(struct f2fs_sb_info *sbi, nid_t nid)
 }
 
 bool is_checkpointed_node(struct f2fs_sb_info *sbi, nid_t nid)
->>>>>>> 26831633cc8... f2fs: drop duplicate radix tree lookup of nat_entry_set
 {
 	struct f2fs_nm_info *nm_i = NM_I(sbi);
 	struct nat_entry *e;
