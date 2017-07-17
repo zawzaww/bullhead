@@ -14,7 +14,6 @@
 		{ NODE,		"NODE" },				\
 		{ DATA,		"DATA" },				\
 		{ META,		"META" },				\
-<<<<<<< HEAD
 		{ META_FLUSH,	"META_FLUSH" })
 
 #define show_bio_type(type)						\
@@ -26,7 +25,6 @@
 		{ WRITE_SYNC, 	"WRITE_SYNC" },				\
 		{ WRITE_FLUSH,	"WRITE_FLUSH" },			\
 		{ WRITE_FUA, 	"WRITE_FUA" })
-=======
 		{ META_FLUSH,	"META_FLUSH" },				\
 		{ INMEM,	"INMEM" },				\
 		{ INMEM_DROP,	"INMEM_DROP" },				\
@@ -58,7 +56,6 @@
 		{ REQ_PRIO, 		"(P)" },			\
 		{ REQ_META | REQ_PRIO,	"(MP)" },			\
 		{ 0, " \b" })
->>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 
 #define show_data_type(type)						\
 	__print_symbolic(type,						\

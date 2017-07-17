@@ -336,8 +336,6 @@ enum page_type {
 	META,
 	NR_PAGE_TYPE,
 	META_FLUSH,
-<<<<<<< HEAD
-=======
 	INMEM,		/* the below types are used by tracepoints only. */
 	INMEM_DROP,
 	INMEM_INVALIDATE,
@@ -410,7 +408,6 @@ enum {
 	CP_TIME,
 	REQ_TIME,
 	MAX_TIME,
->>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 };
 
 struct f2fs_sb_info {
@@ -1051,7 +1048,6 @@ void destroy_node_manager_caches(void);
 /*
  * segment.c
  */
-<<<<<<< HEAD
 void f2fs_balance_fs(struct f2fs_sb_info *);
 void invalidate_blocks(struct f2fs_sb_info *, block_t);
 void locate_dirty_segment(struct f2fs_sb_info *, unsigned int);
@@ -1078,7 +1074,6 @@ int lookup_journal_in_cursum(struct f2fs_summary_block *,
 void flush_sit_entries(struct f2fs_sb_info *);
 int build_segment_manager(struct f2fs_sb_info *);
 void destroy_segment_manager(struct f2fs_sb_info *);
-=======
 void register_inmem_page(struct inode *inode, struct page *page);
 void drop_inmem_pages(struct inode *inode);
 void drop_inmem_page(struct inode *inode, struct page *page);
@@ -1127,7 +1122,6 @@ int build_segment_manager(struct f2fs_sb_info *sbi);
 void destroy_segment_manager(struct f2fs_sb_info *sbi);
 int __init create_segment_manager_caches(void);
 void destroy_segment_manager_caches(void);
->>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 
 /*
  * checkpoint.c

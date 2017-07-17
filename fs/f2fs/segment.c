@@ -20,8 +20,6 @@
 #include "node.h"
 #include <trace/events/f2fs.h>
 
-<<<<<<< HEAD
-=======
 #define __reverse_ffz(x) __reverse_ffs(~(x))
 
 static struct kmem_cache *discard_entry_slab;
@@ -433,7 +431,6 @@ int commit_inmem_pages(struct inode *inode)
 	return err;
 }
 
->>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 /*
  * This function balances dirty node and dentry pages.
  * In addition, it controls garbage collection.

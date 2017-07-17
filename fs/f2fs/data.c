@@ -707,15 +707,12 @@ static void f2fs_invalidate_data_page(struct page *page, unsigned int offset,
 		dec_page_count(sbi, F2FS_DIRTY_DENTS);
 		inode_dec_dirty_dents(inode);
 	}
-<<<<<<< HEAD
-=======
 
 	/* This is atomic written page, keep Private */
 	if (IS_ATOMIC_WRITTEN_PAGE(page))
 		return drop_inmem_page(inode, page);
 
 	set_page_private(page, 0);
->>>>>>> 8f39d283485... f2fs: fix stale ATOMIC_WRITTEN_PAGE private pointer
 	ClearPagePrivate(page);
 }
 
