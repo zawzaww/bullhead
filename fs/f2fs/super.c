@@ -257,8 +257,6 @@ static struct super_operations f2fs_sops = {
 	.statfs		= f2fs_statfs,
 };
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_F2FS_FS_ENCRYPTION
 static int f2fs_get_context(struct inode *inode, void *ctx, size_t len)
 {
@@ -295,7 +293,6 @@ static const struct fscrypt_operations f2fs_cryptops = {
 };
 #endif
 
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 static struct inode *f2fs_nfs_get_inode(struct super_block *sb,
 		u64 ino, u32 generation)
 {
@@ -523,8 +520,6 @@ static void init_sb_info(struct f2fs_sb_info *sbi)
 
 	for (i = 0; i < NR_COUNT_TYPE; i++)
 		atomic_set(&sbi->nr_pages[i], 0);
-<<<<<<< HEAD
-=======
 
 	INIT_LIST_HEAD(&sbi->s_list);
 	mutex_init(&sbi->umount_mutex);
@@ -668,7 +663,6 @@ static int read_raw_super_block(struct f2fs_sb_info *sbi,
 		err = 0;
 
 	return err;
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 }
 
 static int validate_superblock(struct super_block *sb,

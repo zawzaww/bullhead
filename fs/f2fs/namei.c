@@ -271,10 +271,8 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 	struct super_block *sb = dir->i_sb;
 	struct f2fs_sb_info *sbi = F2FS_SB(sb);
 	struct inode *inode;
-<<<<<<< HEAD
 	size_t symlen = strlen(symname) + 1;
 	int err, ilock;
-=======
 	size_t len = strlen(symname);
 	struct fscrypt_str disk_link = FSTR_INIT((char *)symname, len + 1);
 	struct fscrypt_symlink_data *sd = NULL;
@@ -287,7 +285,6 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 
 		if (!fscrypt_has_encryption_key(dir))
 			return -ENOKEY;
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 	f2fs_balance_fs(sbi);
 
@@ -304,10 +301,8 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 	if (err)
 		goto out;
 
-<<<<<<< HEAD
 	err = page_symlink(inode, symname, symlen);
 	alloc_nid_done(sbi, inode->i_ino);
-=======
 	if (f2fs_encrypted_inode(inode)) {
 		struct qstr istr = QSTR_INIT(symname, len);
 		struct fscrypt_str ostr;
@@ -338,7 +333,6 @@ static int f2fs_symlink(struct inode *dir, struct dentry *dentry,
 	}
 
 	err = page_symlink(inode, disk_link.name, disk_link.len);
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 	d_instantiate(dentry, inode);
 	unlock_new_inode(inode);

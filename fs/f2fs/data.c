@@ -474,8 +474,6 @@ int do_write_data_page(struct page *page)
 	/* This page is already truncated */
 	if (old_blk_addr == NULL_ADDR)
 		goto out_writepage;
-<<<<<<< HEAD
-=======
 	}
 
 	if (f2fs_encrypted_inode(inode) && S_ISREG(inode->i_mode)) {
@@ -502,7 +500,6 @@ retry_encrypt:
 			goto out_writepage;
 		}
 	}
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 	set_page_writeback(page);
 

@@ -17,8 +17,6 @@
 #include <linux/slab.h>
 #include <linux/crc32.h>
 #include <linux/magic.h>
-<<<<<<< HEAD
-=======
 #include <linux/kobject.h>
 #include <linux/sched.h>
 #include <linux/vmalloc.h>
@@ -68,7 +66,6 @@ struct f2fs_fault_info {
 extern char *fault_name[FAULT_MAX];
 #define IS_FAULT_SET(fi, type) (fi->inject_type & (1 << (type)))
 #endif
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 /*
  * For mount options
@@ -466,9 +463,7 @@ struct f2fs_sb_info {
 	struct super_block *sb;			/* pointer to VFS super block */
 	struct buffer_head *raw_super_buf;	/* buffer head of raw sb */
 	struct f2fs_super_block *raw_super;	/* raw super block pointer */
-<<<<<<< HEAD
 	int s_dirty;				/* dirty flag for checkpoint */
-=======
 	int valid_super_block;			/* valid super block no */
 	unsigned long s_flag;				/* flags for sbi */
 
@@ -476,7 +471,6 @@ struct f2fs_sb_info {
 	unsigned int blocks_per_blkz;		/* F2FS blocks per zone */
 	unsigned int log_blocks_per_blkz;	/* log2 F2FS blocks per zone */
 #endif
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 
 	/* for node-related operations */
 	struct f2fs_nm_info *nm_info;		/* node manager */
@@ -1319,8 +1313,6 @@ extern const struct address_space_operations f2fs_meta_aops;
 extern const struct inode_operations f2fs_dir_inode_operations;
 extern const struct inode_operations f2fs_symlink_inode_operations;
 extern const struct inode_operations f2fs_special_inode_operations;
-<<<<<<< HEAD
-=======
 extern struct kmem_cache *inode_entry_slab;
 
 /*
@@ -1454,5 +1446,4 @@ static inline bool f2fs_may_encrypt(struct inode *inode)
 	return 0;
 #endif
 }
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 #endif

@@ -219,17 +219,14 @@ struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p)
 	struct f2fs_dir_entry *de = NULL;
 	struct f2fs_dentry_block *dentry_blk = NULL;
 
-<<<<<<< HEAD
 	page = get_lock_data_page(dir, 0);
 	if (IS_ERR(page))
-=======
 	err = fscrypt_setup_filename(dir, child, 1, &fname);
 	if (err) {
 		if (err == -ENOENT)
 			*res_page = NULL;
 		else
 			*res_page = ERR_PTR(err);
->>>>>>> 3b11ec9b69a... fscrypt: catch up to v4.11-rc1
 		return NULL;
 
 	dentry_blk = kmap(page);
