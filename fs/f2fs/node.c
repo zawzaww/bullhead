@@ -237,9 +237,7 @@ retry:
 	/* change address */
 	nat_set_blkaddr(e, new_blkaddr);
 	__set_nat_cache_dirty(nm_i, e);
-<<<<<<< HEAD
 	write_unlock(&nm_i->nat_tree_lock);
-=======
 
 	/* update fsync_mark if its inode nat entry is still alive */
 	if (ni->nid != ni->ino)
@@ -250,7 +248,6 @@ retry:
 		set_nat_flag(e, HAS_LAST_FSYNC, fsync_done);
 	}
 	up_write(&nm_i->nat_tree_lock);
->>>>>>> a4c6fc54e60... f2fs: combine nat_bits and free_nid_bitmap cache
 }
 
 static int try_to_free_nats(struct f2fs_sb_info *sbi, int nr_shrink)
@@ -1408,7 +1405,6 @@ retry:
 	return 1;
 }
 
-<<<<<<< HEAD
 static void remove_free_nid(struct f2fs_nm_info *nm_i, nid_t nid)
 {
 	struct free_nid *i;
@@ -1445,9 +1441,7 @@ static void scan_nat_page(struct f2fs_nm_info *nm_i,
 }
 
 static void build_free_nids(struct f2fs_sb_info *sbi)
-=======
 static void __build_free_nids(struct f2fs_sb_info *sbi, bool sync, bool mount)
->>>>>>> a4c6fc54e60... f2fs: combine nat_bits and free_nid_bitmap cache
 {
 	struct f2fs_nm_info *nm_i = NM_I(sbi);
 	struct curseg_info *curseg = CURSEG_I(sbi, CURSEG_HOT_DATA);
@@ -1459,8 +1453,6 @@ static void __build_free_nids(struct f2fs_sb_info *sbi, bool sync, bool mount)
 	if (nm_i->fcnt > NAT_ENTRY_PER_BLOCK)
 		return;
 
-<<<<<<< HEAD
-=======
 	if (!mount) {
 		/* try to find free nids in free_nid_bitmap */
 		scan_free_nid_bits(sbi);
@@ -1469,7 +1461,6 @@ static void __build_free_nids(struct f2fs_sb_info *sbi, bool sync, bool mount)
 			return;
 	}
 
->>>>>>> a4c6fc54e60... f2fs: combine nat_bits and free_nid_bitmap cache
 	/* readahead nat pages to be scanned */
 	ra_nat_pages(sbi, nid);
 
@@ -2004,9 +1995,7 @@ int build_node_manager(struct f2fs_sb_info *sbi)
 	if (err)
 		return err;
 
-<<<<<<< HEAD
 	build_free_nids(sbi);
-=======
 	err = init_free_nid_cache(sbi);
 	if (err)
 		return err;
@@ -2015,7 +2004,6 @@ int build_node_manager(struct f2fs_sb_info *sbi)
 	load_free_nid_bitmap(sbi);
 
 	build_free_nids(sbi, true, true);
->>>>>>> a4c6fc54e60... f2fs: combine nat_bits and free_nid_bitmap cache
 	return 0;
 }
 
