@@ -619,11 +619,9 @@ static long f2fs_fallocate(struct file *file, int mode,
 	else
 		ret = expand_inode_data(inode, offset, len, mode);
 
-<<<<<<< HEAD
 	if (!ret) {
 		inode->i_mtime = inode->i_ctime = CURRENT_TIME;
 		mark_inode_dirty(inode);
-=======
 		ret = __read_out_blkaddrs(src_inode, src_blkaddr,
 					do_replace, src, olen);
 		if (ret)
@@ -1329,7 +1327,6 @@ static int f2fs_ioc_shutdown(struct file *filp, unsigned long arg)
 	default:
 		ret = -EINVAL;
 		goto out;
->>>>>>> fb4bde7867b... f2fs: don't allow volatile writes for non-regular file
 	}
 	trace_f2fs_fallocate(inode, mode, offset, len, ret);
 	return ret;
