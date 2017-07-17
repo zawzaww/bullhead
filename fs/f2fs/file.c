@@ -102,9 +102,7 @@ static const struct vm_operations_struct f2fs_file_vm_ops = {
 	.remap_pages	= generic_file_remap_pages,
 };
 
-<<<<<<< HEAD
 int f2fs_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
-=======
 static int get_parent_ino(struct inode *inode, nid_t *pino)
 {
 	struct dentry *dentry;
@@ -178,7 +176,6 @@ static void try_to_fix_pino(struct inode *inode)
 
 static int f2fs_do_sync_file(struct file *file, loff_t start, loff_t end,
 						int datasync, bool atomic)
->>>>>>> c2351e7aabf... f2fs: don't allow to get pino when filename is encrypted
 {
 	struct inode *inode = file->f_mapping->host;
 	struct f2fs_sb_info *sbi = F2FS_SB(inode->i_sb);
