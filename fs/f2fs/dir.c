@@ -221,12 +221,6 @@ struct f2fs_dir_entry *f2fs_parent_dir(struct inode *dir, struct page **p)
 
 	page = get_lock_data_page(dir, 0);
 	if (IS_ERR(page))
-	err = fscrypt_setup_filename(dir, child, 1, &fname);
-	if (err) {
-		if (err == -ENOENT)
-			*res_page = NULL;
-		else
-			*res_page = ERR_PTR(err);
 		return NULL;
 
 	dentry_blk = kmap(page);

@@ -474,32 +474,6 @@ int do_write_data_page(struct page *page)
 	/* This page is already truncated */
 	if (old_blk_addr == NULL_ADDR)
 		goto out_writepage;
-	}
-
-	if (f2fs_encrypted_inode(inode) && S_ISREG(inode->i_mode)) {
-		gfp_t gfp_flags = GFP_NOFS;
-
-		/* wait for GCed encrypted page writeback */
-		f2fs_wait_on_encrypted_page_writeback(F2FS_I_SB(inode),
-							fio->old_blkaddr);
-retry_encrypt:
-		fio->encrypted_page = fscrypt_encrypt_page(inode, fio->page,
-							PAGE_SIZE, 0,
-							fio->page->index,
-							gfp_flags);
-		if (IS_ERR(fio->encrypted_page)) {
-			err = PTR_ERR(fio->encrypted_page);
-			if (err == -ENOMEM) {
-				/* flush pending ios and wait for a while */
-				f2fs_flush_merged_bios(F2FS_I_SB(inode));
-				congestion_wait(BLK_RW_ASYNC, HZ/50);
-				gfp_flags |= __GFP_NOFAIL;
-				err = 0;
-				goto retry_encrypt;
-			}
-			goto out_writepage;
-		}
-	}
 
 	set_page_writeback(page);
 
@@ -733,12 +707,6 @@ static void f2fs_invalidate_data_page(struct page *page, unsigned int offset,
 		dec_page_count(sbi, F2FS_DIRTY_DENTS);
 		inode_dec_dirty_dents(inode);
 	}
-
-	/* This is atomic written page, keep Private */
-	if (IS_ATOMIC_WRITTEN_PAGE(page))
-		return drop_inmem_page(inode, page);
-
-	set_page_private(page, 0);
 	ClearPagePrivate(page);
 }
 
