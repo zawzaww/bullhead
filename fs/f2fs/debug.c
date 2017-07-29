@@ -212,17 +212,7 @@ static void update_mem_info(struct f2fs_sb_info *sbi)
 	si->base_mem += (NM_I(sbi)->nat_bits_blocks << F2FS_BLKSIZE_BITS);
 	si->base_mem += NM_I(sbi)->nat_blocks * NAT_ENTRY_BITMAP_SIZE;
 	si->base_mem += NM_I(sbi)->nat_blocks / 8;
-<<<<<<< HEAD
-<<<<<<< HEAD
 	si->base_mem += NM_I(sbi)->nat_blocks * sizeof(unsigned short);
-
-get_cache:
-	si->cache_mem = 0;
-=======
->>>>>>> 90d0d52125d... f2fs: catch up to v4.11-rc1
-=======
-	si->base_mem += NM_I(sbi)->nat_blocks * sizeof(unsigned short);
->>>>>>> 683004b8535... f2fs: squash of linux-4.4.y stable branch patches from jaegeuk/f2fs-stable
 
 get_cache:
 	si->cache_mem = 0;
