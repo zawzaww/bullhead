@@ -12,6 +12,7 @@
 #define _FSCRYPT_PRIVATE_H
 
 #include <linux/fscrypt_supp.h>
+#include <linux/dcache.h>
 
 #define FS_FNAME_CRYPTO_DIGEST_SIZE	32
 
@@ -112,16 +113,6 @@ static inline void bio_set_op_attrs(struct bio *bio, unsigned op,
 		unsigned op_flags)
 {
 	bio->bi_rw = op | op_flags;
-}
-
-static inline struct inode *d_inode(const struct dentry *dentry)
-{
-	return dentry->d_inode;
-}
-
-static inline bool d_is_negative(const struct dentry *dentry)
-{
-	return (dentry->d_inode == NULL);
 }
 
 /* crypto.c */
