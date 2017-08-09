@@ -795,12 +795,9 @@ struct ufs_hba {
 
 	/* Number of requests aborts */
 	int req_abort_count;
-<<<<<<< HEAD
 
 	/* Bitmask for enabling debug prints */
 	u32 ufshcd_dbg_print;
-=======
->>>>>>> 5cd6c58cffb1... scsi: ufs: reduce printout for aborted requests
 };
 
 /* Returns true if clocks can be gated. Otherwise false */
