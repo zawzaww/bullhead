@@ -332,15 +332,7 @@ int snd_timer_close(struct snd_timer_instance *timeri)
 			spin_lock_irq(&timer->lock);
 		}
 		spin_unlock_irq(&timer->lock);
-<<<<<<< HEAD
-		mutex_lock(&register_mutex);
-		list_del(&timeri->open_list);
-		if (timer && list_empty(&timer->open_list_head) &&
-		    timer->hw.close)
-			timer->hw.close(timer);
-=======
 
->>>>>>> 398c394670ee... ALSA: timer: Protect the whole snd_timer_close() with open race
 		/* remove slave links */
 		list_for_each_entry_safe(slave, tmp, &timeri->slave_list_head,
 					 open_list) {
@@ -354,17 +346,10 @@ int snd_timer_close(struct snd_timer_instance *timeri)
 
 		spin_unlock(&timer->lock);
 		spin_unlock_irq(&slave_active_lock);
-<<<<<<< HEAD
-		/* release a card refcount for safe disconnection */
-		if (timer->card)
-			put_device(timer->card->card_dev);
 
-		mutex_unlock(&register_mutex);
-=======
 		/* slave doesn't need to release timer resources below */
 		if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE)
 			timer = NULL;
->>>>>>> 398c394670ee... ALSA: timer: Protect the whole snd_timer_close() with open race
 	}
 
 	if (timeri->private_free)
