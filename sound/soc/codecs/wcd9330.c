@@ -1252,28 +1252,13 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 		if (!tomtom->comp_enabled[comp])
 			break;
 
-<<<<<<< HEAD
 		/* If EAR PA is enabled then compander should not be enabled */
 		if ((snd_soc_read(codec, TOMTOM_A_RX_EAR_EN) & 0x10) != 0) {
 			pr_debug("%s: EAR is enabled, do not enable compander\n",
 				 __func__);
 			break;
 		}
-		/* Set compander Sample rate */
-		snd_soc_update_bits(codec,
-				    TOMTOM_A_CDC_COMP0_FS_CFG + (comp * 8),
-				    0x07, rate);
-		/* Set the static gain offset for HPH Path */
-		if (comp == COMPANDER_1) {
-			if (buck_mv == WCD9XXX_CDC_BUCK_MV_2P15) {
-				snd_soc_update_bits(codec,
-					TOMTOM_A_CDC_COMP0_B4_CTL + (comp * 8),
-					0x80, 0x00);
-			} else {
-				snd_soc_update_bits(codec,
-					TOMTOM_A_CDC_COMP0_B4_CTL + (comp * 8),
-					0x80, 0x80);
-=======
+		
 		/* Disable Compander fully */
 		if (!uhqa_mode_pdesireaudio) {
 			/* Set compander Sample rate */
@@ -1291,7 +1276,6 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 						TOMTOM_A_CDC_COMP0_B4_CTL + (comp * 8),
 						0x80, 0x80);
 				}
->>>>>>> bf6678e14749... PDesire UHQA Driver
 			}
 		}
 
@@ -4488,24 +4472,11 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-<<<<<<< HEAD
-		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after enabling HPHR_HPHL
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA enable\n",
-				__func__, pa_settle_time, w->name);
-		}
-		if (!high_perf_mode && !tomtom->uhqa_mode) {
-=======
+
 		usleep_range(pa_settle_time, pa_settle_time + 1000);
 		pr_debug("%s: sleep %d us after %s PA enable\n", __func__,
 				pa_settle_time, w->name);
 		if (!uhqa_mode_pdesireaudio) {
->>>>>>> bf6678e14749... PDesire UHQA Driver
 			wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
 						 req_clsh_state,
 						 WCD9XXX_CLSH_REQ_ENABLE,
