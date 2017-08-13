@@ -325,7 +325,6 @@ static ssize_t sound_reg_select_store(struct kobject *kobj,
 	return count;
 }
 
-<<<<<<< HEAD
 static ssize_t sound_reg_read_show(struct kobject *kobj,
                 struct kobj_attribute *attr, char *buf)
 {
@@ -366,13 +365,12 @@ static struct kobj_attribute sound_reg_write_attribute =
 		0222,
 		NULL,
 		sound_reg_write_store);
-=======
+
 static struct kobj_attribute high_performance_mode_attribute =
 	__ATTR(gpl_highperf_enabled,
 		0666,
 		hph_perf_show,
 		hph_perf_store);
->>>>>>> fb5890fce84d... sound: Change paths to match FauxSound
 
 static struct kobj_attribute cam_mic_gain_attribute =
 	__ATTR(gpl_cam_mic_gain,
@@ -398,19 +396,11 @@ static struct kobj_attribute headphone_gain_attribute =
 		headphone_gain_show,
 		headphone_gain_store);
 
-<<<<<<< HEAD
-static struct kobj_attribute high_performance_mode_attribute =
-        __ATTR(highperf_enabled,
-                0666,
-                hph_perf_show,
-                hph_perf_store);
-=======
 static struct kobj_attribute headphone_pa_gain_attribute =
 	__ATTR(gpl_headphone_pa_gain,
 		0666,
 		headphone_gain_pa_show,
 		headphone_gain_pa_store);
->>>>>>> fb5890fce84d... sound: Change paths to match FauxSound
 
 static struct attribute *sound_control_attrs[] =
 	{
@@ -466,4 +456,3 @@ module_exit(sound_control_exit);
 MODULE_LICENSE("GPL and additional rights");
 MODULE_AUTHOR("Paul Reioux <reioux@gmail.com>");
 MODULE_DESCRIPTION("Sound Control Module 3.x");
-
