@@ -1246,18 +1246,7 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 		if (!tomtom->comp_enabled[comp])
 			break;
 
-<<<<<<< HEAD
-		/* If EAR PA is enabled then compander should not be enabled */
-		if ((snd_soc_read(codec, TOMTOM_A_RX_EAR_EN) & 0x10) != 0) {
-			pr_debug("%s: EAR is enabled, do not enable compander\n",
-				 __func__);
-			break;
-		}
-		
-		/* Disable Compander fully */
-=======
 		/* PDesireAudio Compander Switch */
->>>>>>> dd5040d59693... sound: Introduce PDesireAudio 10.0
 		if (!uhqa_mode_pdesireaudio) {
 		
 			/* Set compander Sample rate */
