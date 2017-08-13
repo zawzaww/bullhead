@@ -302,12 +302,6 @@ int snd_timer_open(struct snd_timer_instance **ti,
 	return 0;
 }
 
-<<<<<<< HEAD
-static int _snd_timer_stop(struct snd_timer_instance *timeri,
-			   int keep_flag, int event);
-
-=======
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 /*
  * close a timer instance
  */
@@ -415,12 +409,7 @@ static void snd_timer_notify1(struct snd_timer_instance *ti, int event)
 		return;
 	list_for_each_entry(ts, &ti->slave_active_head, active_list)
 		if (ts->ccallback)
-<<<<<<< HEAD
-			ts->ccallback(ti, event + 100, &tstamp, resolution);
-	spin_unlock_irqrestore(&timer->lock, flags);
-=======
 			ts->ccallback(ts, event + 100, &tstamp, resolution);
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 }
 
 /* start/continue a master timer */
@@ -486,85 +475,30 @@ static int snd_timer_start_slave(struct snd_timer_instance *timeri,
 	if (timeri->master)
 		list_add_tail(&timeri->active_list,
 			      &timeri->master->slave_active_head);
-<<<<<<< HEAD
-=======
 		snd_timer_notify1(timeri, start ? SNDRV_TIMER_EVENT_START :
 				  SNDRV_TIMER_EVENT_CONTINUE);
 		spin_unlock(&timeri->timer->lock);
 	}
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 	spin_unlock_irqrestore(&slave_active_lock, flags);
 	return 1; /* delayed start */
 }
 
-<<<<<<< HEAD
-/*
- *  start the timer instance
- */
-int snd_timer_start(struct snd_timer_instance *timeri, unsigned int ticks)
-{
-	struct snd_timer *timer;
-	int result = -EINVAL;
-	unsigned long flags;
-
-	if (timeri == NULL || ticks < 1)
-		return -EINVAL;
-	if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE) {
-		result = snd_timer_start_slave(timeri);
-		snd_timer_notify1(timeri, SNDRV_TIMER_EVENT_START);
-		return result;
-	}
-	timer = timeri->timer;
-	if (timer == NULL)
-		return -EINVAL;
-	if (timer->card && timer->card->shutdown)
-		return -ENODEV;
-	spin_lock_irqsave(&timer->lock, flags);
-	timeri->ticks = timeri->cticks = ticks;
-	timeri->pticks = 0;
-	result = snd_timer_start1(timer, timeri, ticks);
-	spin_unlock_irqrestore(&timer->lock, flags);
-	snd_timer_notify1(timeri, SNDRV_TIMER_EVENT_START);
-	return result;
-}
-
-static int _snd_timer_stop(struct snd_timer_instance * timeri,
-			   int keep_flag, int event)
-=======
 /* stop/pause a master timer */
 static int snd_timer_stop1(struct snd_timer_instance *timeri, bool stop)
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 {
 	struct snd_timer *timer;
 	int result = 0;
 	unsigned long flags;
 
-<<<<<<< HEAD
-	if (snd_BUG_ON(!timeri))
-		return -ENXIO;
-
-	if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE) {
-		if (!keep_flag) {
-			spin_lock_irqsave(&slave_active_lock, flags);
-			timeri->flags &= ~SNDRV_TIMER_IFLG_RUNNING;
-			spin_unlock_irqrestore(&slave_active_lock, flags);
-		}
-		goto __end;
-	}
-=======
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 	timer = timeri->timer;
 	if (!timer)
 		return -EINVAL;
 	spin_lock_irqsave(&timer->lock, flags);
-<<<<<<< HEAD
-=======
 	if (!(timeri->flags & (SNDRV_TIMER_IFLG_RUNNING |
 			       SNDRV_TIMER_IFLG_START))) {
 		result = -EBUSY;
 		goto unlock;
 	}
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 	list_del_init(&timeri->ack_list);
 	list_del_init(&timeri->active_list);
 	if (timer->card && timer->card->shutdown)
@@ -585,16 +519,10 @@ static int snd_timer_stop1(struct snd_timer_instance *timeri, bool stop)
 			}
 		}
 	}
-<<<<<<< HEAD
-	if (!keep_flag)
-		timeri->flags &=
-			~(SNDRV_TIMER_IFLG_RUNNING | SNDRV_TIMER_IFLG_START);
-=======
 	timeri->flags &= ~(SNDRV_TIMER_IFLG_RUNNING | SNDRV_TIMER_IFLG_START);
 	snd_timer_notify1(timeri, stop ? SNDRV_TIMER_EVENT_STOP :
 			  SNDRV_TIMER_EVENT_CONTINUE);
  unlock:
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 	spin_unlock_irqrestore(&timer->lock, flags);
 	return result;
 }
@@ -642,28 +570,10 @@ int snd_timer_start(struct snd_timer_instance *timeri, unsigned int ticks)
  */
 int snd_timer_stop(struct snd_timer_instance *timeri)
 {
-<<<<<<< HEAD
-	struct snd_timer *timer;
-	unsigned long flags;
-	int err;
-
-	err = _snd_timer_stop(timeri, 0, SNDRV_TIMER_EVENT_STOP);
-	if (err < 0)
-		return err;
-	timer = timeri->timer;
-	if (!timer)
-		return -EINVAL;
-	spin_lock_irqsave(&timer->lock, flags);
-	timeri->cticks = timeri->ticks;
-	timeri->pticks = 0;
-	spin_unlock_irqrestore(&timer->lock, flags);
-	return 0;
-=======
 	if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE)
 		return snd_timer_stop_slave(timeri, true);
 	else
 		return snd_timer_stop1(timeri, true);
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 }
 
 /*
@@ -672,26 +582,9 @@ int snd_timer_stop(struct snd_timer_instance *timeri)
 int snd_timer_continue(struct snd_timer_instance *timeri)
 {
 	if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE)
-<<<<<<< HEAD
-		return snd_timer_start_slave(timeri);
-	timer = timeri->timer;
-	if (! timer)
-		return -EINVAL;
-	if (timer->card && timer->card->shutdown)
-		return -ENODEV;
-	spin_lock_irqsave(&timer->lock, flags);
-	if (!timeri->cticks)
-		timeri->cticks = 1;
-	timeri->pticks = 0;
-	result = snd_timer_start1(timer, timeri, timer->sticks);
-	spin_unlock_irqrestore(&timer->lock, flags);
-	snd_timer_notify1(timeri, SNDRV_TIMER_EVENT_CONTINUE);
-	return result;
-=======
 		return snd_timer_start_slave(timeri, false);
 	else
 		return snd_timer_start1(timeri, false, 0);
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 }
 
 /*
@@ -699,14 +592,10 @@ int snd_timer_continue(struct snd_timer_instance *timeri)
  */
 int snd_timer_pause(struct snd_timer_instance * timeri)
 {
-<<<<<<< HEAD
-	return _snd_timer_stop(timeri, 0, SNDRV_TIMER_EVENT_PAUSE);
-=======
 	if (timeri->flags & SNDRV_TIMER_IFLG_SLAVE)
 		return snd_timer_stop_slave(timeri, false);
 	else
 		return snd_timer_stop1(timeri, false);
->>>>>>> 51c135426bc8... ALSA: timer: Call notifier in the same spinlock
 }
 
 /*
