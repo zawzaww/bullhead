@@ -26,7 +26,10 @@ extern void disable_pdesireaudio(void) {
 extern void reinit_pdesireaudio(void) {
 	pdesireaudio_init();
 }
+<<<<<<< HEAD
 
 extern void static_mode_pdesireaudio(bool enable) {
 	pdesireaudio_api_static_mode_control(enable);
 }
+=======
+>>>>>>> parent of a66fa2046fc6... sound: Introduce PDesireAudio 10.1

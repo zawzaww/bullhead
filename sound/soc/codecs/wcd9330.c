@@ -104,8 +104,64 @@ static atomic_t kp_tomtom_priv;
 
 static int high_perf_mode;
 module_param(high_perf_mode, int,
+<<<<<<< HEAD
 			S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
+=======
+              S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
+/* Description of PDesireAudio UHQA Mode:
+ * The PDesireAudio Mode is based on the UHQA Mode from LA.BR.1.3.3_rb2.14 branch
+ * of the sonyxperiadev/kernel repository (https://github.com/sonyxperiadev/kernel)
+ * 
+ * It is more advanced than the normal UHQA mode and also include gains like Lineout and HPHL/HPHR
+ * It also enable PDesireAudio Advanced Mode automatically
+ * 
+ * To enable it you need to execute "echo 1 > /sys/modules/snd_soc_wcd9330/uhqa_mode_pdesireaudio" on your Android Device
+ * 
+ * This module was made with the help of @sonyxperiadev and @BlackSoulxxx (https://github.com/BlackSoulxxx/XerXes/sound/soc/codecs/wcd9xxx-common.c)
+ * Mainatained by Tristan Marsell (tristan.marsell@t.online.de)
+ * Github: PDesire (https://github.com/PDesire) 
+ */
+
+
+//PDesireAudio Version: 10.0 Yandere Audio
+static int uhqa_mode_pdesireaudio = 1;
+module_param(uhqa_mode_pdesireaudio, int,
+			S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(uhqa_mode_pdesireaudio, "PDesireAudio UHQA Audio output switch");
+
+void pdesireaudio_start(void) 
+{
+	printk("Enable PDesireAudio");
+	uhqa_mode_pdesireaudio = 1;
+}
+
+void pdesireaudio_remove(void) 
+{
+	printk("Disable PDesireAudio");
+	uhqa_mode_pdesireaudio = 0;
+} 
+
+void pdesireaudio_init(void) 
+{
+	bool active;
+	
+
+	printk("Re-Init PDesireAudio");
+	if (!uhqa_mode_pdesireaudio)
+		active = false;
+	else 
+		active = true;
+	
+	
+	pdesireaudio_remove();
+	
+	if (active == true)
+		pdesireaudio_start();
+	
+}
+>>>>>>> parent of a66fa2046fc6... sound: Introduce PDesireAudio 10.1
 
 static struct afe_param_slimbus_slave_port_cfg tomtom_slimbus_slave_port_cfg = {
 	.minor_version = 1,
