@@ -115,7 +115,7 @@ MODULE_PARM_DESC(cpe_debug_mode, "boot cpe in debug mode");
 
 static atomic_t kp_tomtom_priv;
 
-int high_perf_mode = 1;
+static int high_perf_mode;
 module_param(high_perf_mode, int,
               S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
@@ -1270,11 +1270,9 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 	pr_debug("%s: %s event %d compander %d, enabled %d", __func__,
 		 w->name, event, comp, tomtom->comp_enabled[comp]);
 
-	if (!uhqa_mode_pdesireaudio) {
-		/* Compander 0 has two channels */
-		mask = enable_mask = 0x03;
-		buck_mv = tomtom_codec_get_buck_mv(codec);
-	}
+	/* Compander 0 has two channels */
+	mask = enable_mask = 0x03;
+	buck_mv = tomtom_codec_get_buck_mv(codec);
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
@@ -4491,13 +4489,11 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		set_bit(HPH_DELAY, &tomtom->status_mask);
 		/* Let MBHC module know PA is turning on */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_pre_on);
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-
 		usleep_range(pa_settle_time, pa_settle_time + 1000);
 		pr_debug("%s: sleep %d us after %s PA enable\n", __func__,
 				pa_settle_time, w->name);
@@ -4509,23 +4505,12 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		}
 		break;
 
-	case SND_SOC_DAPM_PRE_PMD:
-		set_bit(HPH_DELAY, &tomtom->status_mask);
-		break;
-
 	case SND_SOC_DAPM_POST_PMD:
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&tomtom->resmgr, e_post_off);
-		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
-			/*
-			 * Make sure to wait 10ms after disabling HPHR_HPHL
-			 * in register 0x1AB
-			*/
-			usleep_range(pa_settle_time, pa_settle_time + 1000);
-			clear_bit(HPH_DELAY, &tomtom->status_mask);
-			pr_debug("%s: sleep %d us after %s PA disable\n",
-				__func__, pa_settle_time, w->name);
-		}
+		usleep_range(pa_settle_time, pa_settle_time + 1000);
+		pr_debug("%s: sleep %d us after %s PA disable\n", __func__,
+				pa_settle_time, w->name);
 
 		break;
 	}

@@ -30,4 +30,3 @@ extern void reinit_pdesireaudio(void) {
 extern void static_mode_pdesireaudio(bool enable) {
 	pdesireaudio_api_static_mode_control(enable);
 }
-

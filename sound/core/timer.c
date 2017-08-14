@@ -332,14 +332,15 @@ int snd_timer_close(struct snd_timer_instance *timeri)
 		spin_unlock_irq(&timer->lock);
 
 		/* remove slave links */
+		spin_lock_irq(&slave_active_lock);
+		spin_lock(&timer->lock);
 		list_for_each_entry_safe(slave, tmp, &timeri->slave_list_head,
 					 open_list) {
-			spin_lock_irq(&slave_active_lock);
-			_snd_timer_stop(slave, 1, SNDRV_TIMER_EVENT_RESOLUTION);
 			list_move_tail(&slave->open_list, &snd_timer_slave_list);
 			slave->master = NULL;
 			slave->timer = NULL;
-			spin_unlock_irq(&slave_active_lock);
+			list_del_init(&slave->ack_list);
+			list_del_init(&slave->active_list);
 		}
 
 		spin_unlock(&timer->lock);
@@ -473,7 +474,8 @@ static int snd_timer_start_slave(struct snd_timer_instance *timeri,
 
 	spin_lock_irqsave(&slave_active_lock, flags);
 	timeri->flags |= SNDRV_TIMER_IFLG_RUNNING;
-	if (timeri->master)
+	if (timeri->master) 
+	{
 		list_add_tail(&timeri->active_list,
 			      &timeri->master->slave_active_head);
 		snd_timer_notify1(timeri, start ? SNDRV_TIMER_EVENT_START :
