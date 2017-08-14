@@ -105,38 +105,7 @@ static atomic_t kp_tomtom_priv;
 static int high_perf_mode;
 module_param(high_perf_mode, int,
 			S_IRUGO | S_IWUSR | S_IWGRP);
-<<<<<<< HEAD
 MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
-=======
-MODULE_PARM_DESC(uhqa_mode_pdesireaudio, "PDesireAudio UHQA Audio output switch");
-
-void pdesireaudio_start(void) 
-{
-	uhqa_mode_pdesireaudio = 1;
-}
-
-void pdesireaudio_remove(void) 
-{
-	uhqa_mode_pdesireaudio = 0;
-} 
-
-void pdesireaudio_init(void) 
-{
-	bool active;
-	
-	if (!uhqa_mode_pdesireaudio)
-		active = false;
-	else 
-		active = true;
-	
-	
-	pdesireaudio_remove();
-	
-	if (active == true)
-		pdesireaudio_start();
-	
-}
->>>>>>> parent of 0b6e7e0436f6... sound: PDesireAudio: Add PDesireAudio Initialization on plug event & printk debugging
 
 static struct afe_param_slimbus_slave_port_cfg tomtom_slimbus_slave_port_cfg = {
 	.minor_version = 1,
