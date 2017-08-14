@@ -1,15 +1,4 @@
 /* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
-<<<<<<< HEAD
- * Copyright (C) 2017 Tristan Marsell (tristan.marsell@t-online.de). All rights reserved.
- * Copyright (C) 2017 Team DevElite. All rights reserved.
- * 
- * PDesireAudio WCD9330 Tomtom Audio Driver
- * Copyright (C) 2017 Tristan Marsell (tristan.marsell@t-online.de). All rights reserved.
- * Copyright (C) 2017 Team DevElite. All rights reserved.
- *
- * NOTE: This file is licensed under GPL v2 also with modifications.
-=======
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -115,87 +104,8 @@ static atomic_t kp_tomtom_priv;
 
 static int high_perf_mode;
 module_param(high_perf_mode, int,
-<<<<<<< HEAD
-              S_IRUGO | S_IWUSR | S_IWGRP);
-MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
-/* Description of PDesireAudio UHQA Mode:
- * The PDesireAudio Mode is based on the UHQA Mode from LA.BR.1.3.3_rb2.14 branch
- * of the sonyxperiadev/kernel repository (https://github.com/sonyxperiadev/kernel)
- * 
- * It is more advanced than the normal UHQA mode and also include gains like Lineout and HPHL/HPHR
- * It also enable PDesireAudio Advanced Mode automatically
- * 
- * To enable it you need to execute "echo 1 > /sys/modules/snd_soc_wcd9330/uhqa_mode_pdesireaudio" on your Android Device
- * 
- * This module was made with the help of @sonyxperiadev and @BlackSoulxxx (https://github.com/BlackSoulxxx/XerXes/sound/soc/codecs/wcd9xxx-common.c)
- * Mainatained by Tristan Marsell (tristan.marsell@t.online.de)
- * Github: PDesire (https://github.com/PDesire) 
- */
-
-
-//PDesireAudio Version: 10.1 Yandere Audio
-static int uhqa_mode_pdesireaudio = 1;
-module_param(uhqa_mode_pdesireaudio, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-MODULE_PARM_DESC(uhqa_mode_pdesireaudio, "PDesireAudio UHQA Audio output switch");
-
-static int pdesireaudio_static_mode;
-module_param(pdesireaudio_static_mode, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-MODULE_PARM_DESC(pdesireaudio_static_mode, "Set PDesireAudio to static mode, so User can just control via kernelspace without changes due dynamic changes");
-
-
-void pdesireaudio_start(void) 
-{
-	if (!pdesireaudio_static_mode){
-		printk("Enable PDesireAudio");
-		uhqa_mode_pdesireaudio = 1;
-	}
-}
-
-void pdesireaudio_remove(void) 
-{
-	if (!pdesireaudio_static_mode){
-		printk("Disable PDesireAudio");
-		uhqa_mode_pdesireaudio = 0;
-	}
-} 
-
-void pdesireaudio_init(void) 
-{
-	if (!pdesireaudio_static_mode){
-		bool active;
-
-
-		printk("Re-Init PDesireAudio");
-		if (!uhqa_mode_pdesireaudio)
-			active = false;
-		else
-			active = true;
-
-
-		pdesireaudio_remove();
-
-		if (active == true)
-			pdesireaudio_start();
-	
-	}
-}
-
-void pdesireaudio_api_static_mode_control(bool enable)
-{
-	if(enable == true) {
-		printk("Set PDesireAudio to static mode");
-		pdesireaudio_static_mode = 1;
-	} else {
-		printk("Set PDesireAudio to dynamic mode");
-		pdesireaudio_static_mode = 0;
-	}
-}
-=======
 			S_IRUGO | S_IWUSR | S_IWGRP);
 MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
 
 static struct afe_param_slimbus_slave_port_cfg tomtom_slimbus_slave_port_cfg = {
 	.minor_version = 1,
@@ -1156,36 +1066,6 @@ static int tomtom_config_gain_compander(struct snd_soc_codec *codec,
 				       int comp, bool enable)
 {
 	int ret = 0;
-<<<<<<< HEAD
-	if (!uhqa_mode_pdesireaudio) {
-		switch (comp) {
-		case COMPANDER_0:	
-			snd_soc_update_bits(codec, TOMTOM_A_SPKR_DRV1_GAIN,
-							1 << 2, !enable << 2);
-			snd_soc_update_bits(codec, TOMTOM_A_SPKR_DRV2_GAIN,
-							1 << 2, !enable << 2);
-			break;
-		case COMPANDER_1:
-			snd_soc_update_bits(codec, TOMTOM_A_RX_HPH_L_GAIN,
-						    1 << 5, !enable << 5);
-			snd_soc_update_bits(codec, TOMTOM_A_RX_HPH_R_GAIN,
-						    1 << 5, !enable << 5);
-			break;
-		case COMPANDER_2:
-			snd_soc_update_bits(codec, TOMTOM_A_RX_LINE_1_GAIN,
-						    1 << 5, !enable << 5);
-			snd_soc_update_bits(codec, TOMTOM_A_RX_LINE_3_GAIN,
-						    1 << 5, !enable << 5);
-			snd_soc_update_bits(codec, TOMTOM_A_RX_LINE_2_GAIN,
-						    1 << 5, !enable << 5);
-			snd_soc_update_bits(codec, TOMTOM_A_RX_LINE_4_GAIN,
-						    1 << 5, !enable << 5);
-			break;
-		default:
-			WARN_ON(1);
-			ret = -EINVAL;
-		}
-=======
 
 	switch (comp) {
 	case COMPANDER_0:
@@ -1213,7 +1093,6 @@ static int tomtom_config_gain_compander(struct snd_soc_codec *codec,
 	default:
 		WARN_ON(1);
 		ret = -EINVAL;
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
 	}
 
 	return ret;
@@ -1277,77 +1156,6 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 		if (!tomtom->comp_enabled[comp])
 			break;
 
-<<<<<<< HEAD
-		/* PDesireAudio Compander Switch */
-		if (!uhqa_mode_pdesireaudio) {
-		
-			/* Set compander Sample rate */
-			snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_FS_CFG + (comp * 8),
-						0x07, rate);
-			/* Set the static gain offset for HPH Path */
-			if (comp == COMPANDER_1) {
-				if (buck_mv == WCD9XXX_CDC_BUCK_MV_2P15) {
-					snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_B4_CTL + (comp * 8),
-						0x80, 0x00);
-				} else {
-					snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_B4_CTL + (comp * 8),
-						0x80, 0x80);
-				}
-			}
-			
-			/* Enable RX interpolation path compander clocks */
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_RX_B2_CTL,
-						mask << comp_shift[comp],
-						mask << comp_shift[comp]);
-			/* Toggle compander reset bits */
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_OTHR_RESET_B2_CTL,
-						mask << comp_shift[comp],
-						mask << comp_shift[comp]);
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_OTHR_RESET_B2_CTL,
-						mask << comp_shift[comp], 0);
-
-			/* Set gain source to compander */
-			tomtom_config_gain_compander(codec, comp, true);
-			
-			/* Compander enable */
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_COMP0_B1_CTL +
-				    (comp * 8), enable_mask, enable_mask);
-				    
-			tomtom_discharge_comp(codec, comp);
-
-			/* Set sample rate dependent paramater */
-			snd_soc_write(codec, TOMTOM_A_CDC_COMP0_B3_CTL + (comp * 8),
-					  comp_params->rms_meter_resamp_fact);
-			snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_B2_CTL + (comp * 8),
-						0xF0, comp_params->rms_meter_div_fact << 4);
-			snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_B2_CTL + (comp * 8),
-						0x0F, comp_params->peak_det_timeout);
-		} else {
-			/* Disable compander */
-			snd_soc_update_bits(codec,
-						TOMTOM_A_CDC_COMP0_B1_CTL + (comp * 8),
-						 enable_mask, 0x00);
-
-			/* Toggle compander reset bits */
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_OTHR_RESET_B2_CTL,
-						    		 mask << comp_shift[comp],
-						   		 mask << comp_shift[comp]);
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_OTHR_RESET_B2_CTL,
-						    		 mask << comp_shift[comp], 0);
-
-			/* Turn off the clock for compander in pair */
-			snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_RX_B2_CTL,
-						    		 mask << comp_shift[comp], 0);
-
-			/* Set gain source to register */
-			tomtom_config_gain_compander(codec, comp, false);			
-		}
-=======
 		/* If EAR PA is enabled then compander should not be enabled */
 		if ((snd_soc_read(codec, TOMTOM_A_RX_EAR_EN) & 0x10) != 0) {
 			pr_debug("%s: EAR is enabled, do not enable compander\n",
@@ -1399,7 +1207,6 @@ static int tomtom_config_compander(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec,
 					TOMTOM_A_CDC_COMP0_B2_CTL + (comp * 8),
 					0x0F, comp_params->peak_det_timeout);
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
 		break;
 	case SND_SOC_DAPM_PRE_PMD:
 		/* Disable compander */
@@ -4535,12 +4342,6 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 		break;
 
 	case SND_SOC_DAPM_POST_PMU:
-<<<<<<< HEAD
-		usleep_range(pa_settle_time, pa_settle_time + 1000);
-		pr_debug("%s: sleep %d us after %s PA enable\n", __func__,
-				pa_settle_time, w->name);
-		if (!uhqa_mode_pdesireaudio) {
-=======
 		if (test_bit(HPH_DELAY, &tomtom->status_mask)) {
 			/*
 			 * Make sure to wait 10ms after enabling HPHR_HPHL
@@ -4552,7 +4353,6 @@ static int tomtom_hph_pa_event(struct snd_soc_dapm_widget *w,
 				__func__, pa_settle_time, w->name);
 		}
 		if (!high_perf_mode && !tomtom->uhqa_mode) {
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
 			wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
 						 req_clsh_state,
 						 WCD9XXX_CLSH_REQ_ENABLE,

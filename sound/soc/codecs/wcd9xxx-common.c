@@ -16,10 +16,6 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/mfd/wcd9xxx/wcd9xxx_registers.h>
-<<<<<<< HEAD
-#include "pdesireaudio.h"
-=======
->>>>>>> parent of 36056b8f4e60... PDesire UHQA Driver
 #include "wcd9xxx-common.h"
 
 #define CLSH_COMPUTE_EAR 0x01
