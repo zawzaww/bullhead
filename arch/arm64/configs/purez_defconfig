@@ -6,7 +6,7 @@
 # 
 # PureZ Setup 
 #
-CONFIG_LOCALVERSION="PureZ-Kernel-bullhead-v4.2"
+CONFIG_LOCALVERSION="-PureZ.Kernel-bullhead-v4.2"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
 CONFIG_TOUCHSCREEN_SWEEP2WAKE=y
