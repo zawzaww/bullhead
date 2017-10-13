@@ -2,11 +2,10 @@
 # Linux/arm64 3.10.107 bullhead PureZ Kernel Configuration
 #
 
-
 # 
 # PureZ Setup 
 #
-CONFIG_LOCALVERSION="-bullhead-:PureZ-Kernel-4.5"
+CONFIG_LOCALVERSION="-bullhead-PureZ-Kernel-4.6"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
 CONFIG_TOUCHSCREEN_SWEEP2WAKE=y
@@ -33,7 +32,6 @@ CONFIG_F2FS_FS_POSIX_ACL=y
 CONFIG_F2FS_FS_SECURITY=y
 CONFIG_F2FS_FS_ENCRYPTION=y
 # CONFIG_F2FS_CHECK_FS is not set
-
 
 #
 # bullhead Setup
