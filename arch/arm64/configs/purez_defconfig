@@ -1,11 +1,11 @@
 #
-# Linux/arm64 3.10.107 bullhead PureZ Kernel Configuration
+# Linux/arm64 3.10.108 bullhead PureZ Kernel Configuration
 #
 
 # 
 # PureZ Setup 
 #
-CONFIG_LOCALVERSION="-bullhead:PureZ-Kernel-4.7"
+CONFIG_LOCALVERSION="-bullhead:PureZ-Kernel-4.8"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
 CONFIG_TOUCHSCREEN_SWEEP2WAKE=y
