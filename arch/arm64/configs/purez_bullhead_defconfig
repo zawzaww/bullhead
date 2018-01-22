@@ -1,10 +1,16 @@
-#
-# Linux/arm64 3.10.108 bullhead PureZ Kernel Configuration
-#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                           #
+# Linux/arm64 3.10.108 bullhead PureZ Kernel Configuration  #
+# Google Nexus 5X (bullhead)                                #
+#                                                           #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# 
-# PureZ Setup 
-#
+
+# # # # # # # #
+#             #
+# PureZ Setup #
+#             # 
+# # # # # # # #
 CONFIG_LOCALVERSION="-bullhead:PureZ-Kernel-4.9"
 # CONFIG_LOCALVERSION_AUTO is not set
 # CONFIG_CC_OPTIMIZE_FOR_SIZE is not set
@@ -33,9 +39,12 @@ CONFIG_F2FS_FS_SECURITY=y
 CONFIG_F2FS_FS_ENCRYPTION=y
 # CONFIG_F2FS_CHECK_FS is not set
 
-#
-# bullhead Setup
-#
+
+# # # # # # # # # #
+#                 #
+# bullhead Setup  #
+#                 #
+# # # # # # # # # #
 CONFIG_AUDIT=y
 CONFIG_NO_HZ=y
 CONFIG_HIGH_RES_TIMERS=y
