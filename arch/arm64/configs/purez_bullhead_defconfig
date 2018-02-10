@@ -1,7 +1,6 @@
-# Linux/arm64 3.10.108 PureZ Kernel Configuration
-# Nexus 5X (bullhead)
+# Linux/arm64 3.10.108 bullhead PureZ Kernel Configuration
+# Google Nexus 5X
 #
-
 
 #
 # PureZ Setup
@@ -33,7 +32,6 @@ CONFIG_F2FS_FS_POSIX_ACL=y
 CONFIG_F2FS_FS_SECURITY=y
 CONFIG_F2FS_FS_ENCRYPTION=y
 # CONFIG_F2FS_CHECK_FS is not set
-
 
 #
 # bullhead Setup
