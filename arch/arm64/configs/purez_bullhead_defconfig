@@ -1,6 +1,6 @@
-# Linux/arm64 3.10.108 bullhead PureZ Kernel Configuration
-# Google Nexus 5X
-#
+# Linux/arm64 3.10.73 PureZ Kernel Configuration
+# LG Nexus 5X (bullhead)
+# 
 
 #
 # PureZ Setup
