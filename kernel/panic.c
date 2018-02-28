@@ -24,6 +24,13 @@
 #include <linux/nmi.h>
 #include <linux/console.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/exception.h>
+
+#ifdef CONFIG_LGE_HANDLE_PANIC
+#include <soc/qcom/lge/lge_handle_panic.h>
+#endif
+
 #define PANIC_TIMER_STEP 100
 #define PANIC_BLINK_SPD 18
 
