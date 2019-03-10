@@ -401,7 +401,7 @@ static struct dentry *d_kill(struct dentry *dentry, struct dentry *parent)
 	__releases(parent->d_lock)
 	__releases(dentry->d_inode->i_lock)
 {
-	__list_del_entry(&dentry->d_child);
+	list_del(&dentry->d_child);
 	/*
 	 * Inform ascending readers that we are no longer attached to the
 	 * dentry tree
@@ -1093,14 +1093,7 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		/* go into the first sibling still alive */
-		do {
-			next = child->d_child.next;
-			if (next == &this_parent->d_subdirs)
-				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
-		} while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED));
-		rcu_read_unlock();
+		next = child->d_child.next;
 		goto resume;
 	}
 	if (!locked && read_seqretry(&rename_lock, seq))
@@ -1219,14 +1212,7 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		/* go into the first sibling still alive */
-		do {
-			next = child->d_child.next;
-			if (next == &this_parent->d_subdirs)
-				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
-		} while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED));
-		rcu_read_unlock();
+		next = child->d_child.next;
 		goto resume;
 	}
 out:
@@ -2442,12 +2428,6 @@ static void __d_materialise_dentry(struct dentry *dentry, struct dentry *anon)
 	dentry->d_parent = dentry;
 	list_del_init(&dentry->d_child);
 	anon->d_parent = dparent;
-	if (likely(!d_unhashed(anon))) {
-		hlist_bl_lock(&anon->d_sb->s_anon);
-		__hlist_bl_del(&anon->d_hash);
-		anon->d_hash.pprev = NULL;
-		hlist_bl_unlock(&anon->d_sb->s_anon);
-	}
 	list_move(&anon->d_child, &dparent->d_subdirs);
 
 	write_seqcount_end(&dentry->d_seq);
@@ -3024,14 +3004,7 @@ ascend:
 		/* might go back up the wrong parent if we have had a rename. */
 		if (!locked && read_seqretry(&rename_lock, seq))
 			goto rename_retry;
-		/* go into the first sibling still alive */
-		do {
-			next = child->d_child.next;
-			if (next == &this_parent->d_subdirs)
-				goto ascend;
-			child = list_entry(next, struct dentry, d_child);
-		} while (unlikely(child->d_flags & DCACHE_DENTRY_KILLED));
-		rcu_read_unlock();
+		next = child->d_child.next;
 		goto resume;
 	}
 	if (!locked && read_seqretry(&rename_lock, seq))
@@ -3051,6 +3024,22 @@ rename_retry:
 	write_seqlock(&rename_lock);
 	goto again;
 }
+
+void d_tmpfile(struct dentry *dentry, struct inode *inode)
+{
+	inode_dec_link_count(inode);
+	BUG_ON(dentry->d_name.name != dentry->d_iname ||
+		!hlist_unhashed(&dentry->d_u.d_alias) ||
+		!d_unlinked(dentry));
+	spin_lock(&dentry->d_parent->d_lock);
+	spin_lock_nested(&dentry->d_lock, DENTRY_D_LOCK_NESTED);
+	dentry->d_name.len = sprintf(dentry->d_iname, "#%llu",
+				(unsigned long long)inode->i_ino);
+	spin_unlock(&dentry->d_lock);
+	spin_unlock(&dentry->d_parent->d_lock);
+	d_instantiate(dentry, inode);
+}
+EXPORT_SYMBOL(d_tmpfile);
 
 /**
  * find_inode_number - check for dentry with name
