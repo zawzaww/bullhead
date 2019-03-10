@@ -1082,7 +1082,6 @@ resume:
 	 * All done at this level ... ascend and resume the search.
 	 */
 	rcu_read_lock();
-ascend:
 	if (this_parent != parent) {
 		struct dentry *child = this_parent;
 		this_parent = child->d_parent;
@@ -1201,7 +1200,6 @@ resume:
 	 * All done at this level ... ascend and resume the search.
 	 */
 	rcu_read_lock();
-ascend:
 	if (this_parent != parent) {
 		struct dentry *child = this_parent;
 		this_parent = child->d_parent;
@@ -2989,7 +2987,6 @@ resume:
 		spin_unlock(&dentry->d_lock);
 	}
 	rcu_read_lock();
-ascend:
 	if (this_parent != root) {
 		struct dentry *child = this_parent;
 		if (!(this_parent->d_flags & DCACHE_GENOCIDE)) {
